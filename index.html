@@ -61,6 +61,9 @@ const IC = {
   pres:'<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M12 16v3M8 22l4-3 4 3"/>',
   fileDown:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15l3 3 3-3"/>',
   settings:'<path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+  undo:'<path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
+  clip:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 12h6M9 16h6M9 8h1"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
 };
 function mkIcon(key) {
   return function Ic({ size = 16, style, className, strokeWidth = 2 }) {
@@ -80,7 +83,8 @@ const Plus = mkIcon('plus'), X = mkIcon('x'), Check = mkIcon('check'),
   Crop = mkIcon('crop'), ZoomIn = mkIcon('zoom'), Video = mkIcon('video'),
   Share2 = mkIcon('share'), Play = mkIcon('play'), Columns2 = mkIcon('columns'),
   ImageIcon = mkIcon('images'), Presentation = mkIcon('pres'), FileDown = mkIcon('fileDown'),
-  Settings2 = mkIcon('settings'), Zap = mkIcon('wand');
+  Settings2 = mkIcon('settings'), Zap = mkIcon('wand'),
+  Undo2 = mkIcon('undo'), ClipboardList = mkIcon('clip'), Save = mkIcon('save');
 
 
 
@@ -339,6 +343,10 @@ async function exportReport(rec) {
     if (v) lines.push(...wrapText(`${label}: ${v}`, 100));
   }
   if (rec.notes?.trim()) lines.push(...wrapText(`Notes: ${rec.notes.trim()}`, 100));
+  for (const vis of (rec.visits || []).slice().sort((a,b)=>a.date.localeCompare(b.date))) {
+    const bits = [vis.status && `Status ${vis.status}`, vis.uj && `UJ ${vis.uj}`, vis.lj && `LJ ${vis.lj}`, vis.note].filter(Boolean).join(" · ");
+    if (bits) lines.push(...wrapText(`${fmt(vis.date)} — ${bits}`, 100));
+  }
   if (lines.length) {
     txt(M, y, 10, "Key findings"); y += 13;
     for (const l of lines) { nl(11); txt(M, y, 8, l, 0.25); y += 11; }
@@ -596,7 +604,7 @@ function App() {
 
   const addPatient = async (code, dx, stage) => {
     const id = uid();
-    const rec = { id, code, dx, stage, notes: "", next: "", sets: [], chart: {} };
+    const rec = { id, code, dx, stage, notes: "", next: "", sets: [], visits: [], chart: {} };
     await S.set(`cf:p:${id}`, JSON.stringify(rec));
     await saveIndex([{ id, code, stage, next: "" }, ...index]);
     setAdding(false);
@@ -946,10 +954,11 @@ function Patient({ id, onBack, onMeta, onDelete }) {
         const p = JSON.parse(r.value);
         if (!p.chart) p.chart = {};
         if (!p.sets) p.sets = [];
+        if (!p.visits) p.visits = [];
         p.sets.forEach((s) => { if (!s.extras) s.extras = []; });
         setRec(p);
       } catch {
-        setRec({ id, code: "?", dx: "", stage: STAGES[0], notes: "", next: "", sets: [], chart: {} });
+        setRec({ id, code: "?", dx: "", stage: STAGES[0], notes: "", next: "", sets: [], visits: [], chart: {} });
       }
     })();
     return () => clearTimeout(saveTimer.current);
@@ -975,6 +984,23 @@ function Patient({ id, onBack, onMeta, onDelete }) {
       saveTimer.current = setTimeout(() => S.set(`cf:p:${id}`, JSON.stringify(next)), 500);
       return next;
     });
+  };
+
+  /* ---- daily visit notes ---- */
+  const addVisit = async () => {
+    const v = { id: uid(), date: today(), status: "", uj: "", lj: "", note: "" };
+    await persist({ ...rec, visits: [v, ...(rec.visits || [])] });
+  };
+  const updVisit = (vid, patch) => {
+    setRec((prev) => {
+      const next = { ...prev, visits: prev.visits.map((v) => (v.id === vid ? { ...v, ...patch } : v)) };
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => S.set(`cf:p:${id}`, JSON.stringify(next)), 500);
+      return next;
+    });
+  };
+  const delVisit = async (vid) => {
+    await persist({ ...rec, visits: rec.visits.filter((v) => v.id !== vid) });
   };
 
   const nextEmptySlot = (sets, setId, afterSlot) => {
@@ -1258,7 +1284,7 @@ function Patient({ id, onBack, onMeta, onDelete }) {
           </div>
 
           <div className="flex gap-5 mt-2">
-            {[["records", "Records", Images], ["chart", "Chart", FileText]].map(([k, t, Icon]) => (
+            {[["records", "Records", Images], ["visits", "Visits", ClipboardList], ["chart", "Chart", FileText]].map(([k, t, Icon]) => (
               <button key={k} onClick={() => { setTab(k); setCompare(false); setPicked([]); }}
                 className="flex items-center gap-1.5 pb-2 text-[13px]"
                 style={{
@@ -1441,6 +1467,8 @@ function Patient({ id, onBack, onMeta, onDelete }) {
           </>
         )}
 
+        {tab === "visits" && <Visits visits={rec.visits || []} onAdd={addVisit} onUpd={updVisit} onDel={delVisit} />}
+
         {tab === "chart" && <Chart chart={rec.chart} setChart={setChart} />}
       </div>
 
@@ -1481,7 +1509,11 @@ function Patient({ id, onBack, onMeta, onDelete }) {
           ))}
           <FileBtn icon={Video} accept="video/*" capture="environment"
             onSelect={(f) => handleVideo(f, { setId: sheet.setId })}>
-            Video clip (max 10 s)
+            Record video (max 10 s)
+          </FileBtn>
+          <FileBtn icon={ImageIcon} accept="video/*"
+            onSelect={(f) => handleVideo(f, { setId: sheet.setId })}>
+            Video from library
           </FileBtn>
         </Sheet>
       )}
@@ -1551,6 +1583,110 @@ function Patient({ id, onBack, onMeta, onDelete }) {
       {compare && picked.length === 2 && (
         <CompareView picked={picked} sets={rec.sets} onClose={() => setPicked([])} />
       )}
+    </div>
+  );
+}
+
+/* ---------------- Visits (daily notes) ---------------- */
+function Visits({ visits, onAdd, onUpd, onDel }) {
+  const [openId, setOpenId] = useState(visits[0]?.id || null);
+  const [confirm, setConfirm] = useState(null);
+  return (
+    <div className="px-4 pt-3 pb-40">
+      {visits.length === 0 ? (
+        <div className="px-6 py-10 rounded-2xl text-center" style={{ border: `1px dashed ${C.line}` }}>
+          <p className="text-xs leading-relaxed" style={{ color: C.muted }}>
+            No visit notes yet. Add a note for each appointment — what you did, and the status of each jaw.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {visits.map((v) => {
+            const isOpen = openId === v.id;
+            const summary = [v.status && `Status: ${v.status}`, v.uj && `UJ: ${v.uj}`, v.lj && `LJ: ${v.lj}`]
+              .filter(Boolean).join("  ·  ");
+            return (
+              <div key={v.id} className="rounded-xl overflow-hidden"
+                   style={{ background: C.panel, border: `1px solid ${isOpen ? C.accent + "55" : C.line}` }}>
+                <button onClick={() => setOpenId(isOpen ? null : v.id)}
+                  className="w-full flex items-center gap-2 px-3.5 py-3 text-left">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold tabular-nums">{fmt(v.date)}</p>
+                    {!isOpen && summary && (
+                      <p className="text-[11px] mt-0.5 truncate" style={{ color: C.muted }}>{summary}</p>
+                    )}
+                    {!isOpen && !summary && v.note && (
+                      <p className="text-[11px] mt-0.5 truncate" style={{ color: C.muted }}>{v.note}</p>
+                    )}
+                  </div>
+                  <ChevronDown size={14} style={{ color: C.muted, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+                </button>
+                {isOpen && (
+                  <div className="px-3.5 pb-3.5 space-y-2.5">
+                    <div>
+                      <p className="text-[10px] mb-1" style={{ color: C.muted }}>Date</p>
+                      <input type="date" value={v.date} onChange={(e) => onUpd(v.id, { date: e.target.value })}
+                        className="px-3 py-2 rounded-lg bg-transparent outline-none text-sm tabular-nums w-full"
+                        style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text, colorScheme: "dark" }} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] mb-1" style={{ color: C.muted }}>Status</p>
+                      <input value={v.status} onChange={(e) => onUpd(v.id, { status: e.target.value })}
+                        placeholder="e.g. Active tx, month 6"
+                        className="px-3 py-2 rounded-lg bg-transparent outline-none text-sm w-full"
+                        style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <p className="text-[10px] mb-1" style={{ color: C.muted }}>UJ (upper jaw)</p>
+                        <input value={v.uj} onChange={(e) => onUpd(v.id, { uj: e.target.value })}
+                          placeholder="e.g. 0.018 NiTi"
+                          className="px-3 py-2 rounded-lg bg-transparent outline-none text-sm w-full"
+                          style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] mb-1" style={{ color: C.muted }}>LJ (lower jaw)</p>
+                        <input value={v.lj} onChange={(e) => onUpd(v.id, { lj: e.target.value })}
+                          placeholder="e.g. 0.016 SS"
+                          className="px-3 py-2 rounded-lg bg-transparent outline-none text-sm w-full"
+                          style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] mb-1" style={{ color: C.muted }}>What was done today</p>
+                      <textarea rows={4} value={v.note} onChange={(e) => onUpd(v.id, { note: e.target.value })}
+                        placeholder="Procedure, adjustments, instructions, next step…"
+                        className="w-full px-3 py-2 rounded-lg bg-transparent outline-none text-sm leading-relaxed resize-none"
+                        style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                    </div>
+                    {confirm === v.id ? (
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { onDel(v.id); setConfirm(null); }}
+                          className="text-[11px] px-3 py-1.5 rounded-lg font-semibold"
+                          style={{ background: C.danger, color: "#2A0E0C" }}>Delete note</button>
+                        <button onClick={() => setConfirm(null)}
+                          className="text-[11px] px-3 py-1.5 rounded-lg"
+                          style={{ background: C.panel2, color: C.muted, border: `1px solid ${C.line}` }}>Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end">
+                        <button onClick={() => setConfirm(v.id)} className="flex items-center gap-1 text-[11px]" style={{ color: C.muted }}>
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <button onClick={onAdd}
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold shadow-2xl active:scale-95 transition-transform"
+        style={{ background: C.accent, color: "#06231F" }}>
+        <Plus size={15} strokeWidth={2.6} /> Add visit note
+      </button>
     </div>
   );
 }
@@ -1676,6 +1812,7 @@ function Viewer({ viewer, setViewer, onClose, onDelete, onReplace, onEdit }) {
 function Editor({ v, onClose, onSave }) {
   const [img, setImg] = useState(null);
   const [rot, setRot] = useState(0);
+  const [fine, setFine] = useState(0);
   const [flip, setFlip] = useState(false);
   const [bright, setBright] = useState(1);
   const [contrast, setContrast] = useState(1);
@@ -1698,16 +1835,19 @@ function Editor({ v, onClose, onSave }) {
 
   const aspect = v.aspect || 4 / 3;
 
+  const origRef = useRef(null);
   useEffect(() => {
     let W = Math.min(window.innerWidth - 20, 520);
     let H = W / aspect;
-    const maxH = window.innerHeight - 300;
+    const maxH = window.innerHeight - 320;
     if (H > maxH) { H = maxH; W = H * aspect; }
     setDims({ W: Math.round(W), H: Math.round(H) });
     (async () => {
       try {
         const r = await S.get(`cf:img:${v.imgId}`);
-        setImg(await loadImg(r.value));
+        const im = await loadImg(r.value);
+        origRef.current = im;
+        setImg(im);
       } catch {}
     })();
   }, [v.imgId]);
@@ -1718,6 +1858,10 @@ function Editor({ v, onClose, onSave }) {
     out.onload = () => setImg(out);
     out.src = autoToneCanvas(img, "natural").toDataURL("image/jpeg", 0.9);
   };
+  const undoAll = () => {
+    if (origRef.current) setImg(origRef.current);
+    setRot(0); setFine(0); setFlip(false); setBright(1); setContrast(1); setZoom(1); setOff({ x: 0, y: 0 });
+  };
 
   const drawBase = useCallback((ctx, W, H, k) => {
     ctx.fillStyle = "#000";
@@ -1726,15 +1870,17 @@ function Editor({ v, onClose, onSave }) {
     ctx.save();
     ctx.filter = `brightness(${bright}) contrast(${contrast})`;
     ctx.translate(W / 2 + off.x * k, H / 2 + off.y * k);
-    ctx.rotate((rot * Math.PI) / 180);
+    ctx.rotate(((rot + fine) * Math.PI) / 180);
     ctx.scale(flip ? -1 : 1, 1);
     const iw = img.width, ih = img.height;
     const eff = rot % 180 ? { w: ih, h: iw } : { w: iw, h: ih };
-    const s0 = Math.max(W / eff.w, H / eff.h);
+    /* overscan so fine tilt never shows black corners */
+    const tiltPad = 1 + Math.min(0.35, Math.abs(fine) / 45);
+    const s0 = Math.max(W / eff.w, H / eff.h) * tiltPad;
     const sc = s0 * zoom;
     ctx.drawImage(img, (-iw * sc) / 2, (-ih * sc) / 2, iw * sc, ih * sc);
     ctx.restore();
-  }, [img, rot, flip, bright, contrast, zoom, off]);
+  }, [img, rot, fine, flip, bright, contrast, zoom, off]);
 
   const drawTexts = useCallback((ctx, W, H, k) => {
     ctx.textAlign = "center";
@@ -1978,7 +2124,8 @@ function Editor({ v, onClose, onSave }) {
       }))
       .filter((t) => t.x > 0.02 && t.x < 0.98 && t.y > 0.04 && t.y < 0.98));
     setImg(newImg);
-    setRot(0); setFlip(false); setZoom(1); setOff({ x: 0, y: 0 });
+    origRef.current = newImg;
+    setRot(0); setFine(0); setFlip(false); setZoom(1); setOff({ x: 0, y: 0 });
     setBright(1); setContrast(1);
     setCropMode(false);
     setCropRect(null);
@@ -2093,6 +2240,14 @@ function Editor({ v, onClose, onSave }) {
           )}
           <div className="px-5 pt-2 space-y-1.5">
             <div className="flex items-center gap-3">
+              <RotateCw size={13} style={{ color: C.muted }} />
+              <input type="range" min="-15" max="15" step="0.5" value={fine}
+                onChange={(e) => setFine(+e.target.value)} className="flex-1" style={{ accentColor: C.accent }} />
+              <button onClick={() => setFine(0)} className="text-[10px] tabular-nums w-9 text-right" style={{ color: C.muted }}>
+                {fine ? fine.toFixed(1) + "°" : "0°"}
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
               <ZoomIn size={13} style={{ color: C.muted }} />
               <input type="range" min="1" max="6" step="0.02" value={zoom}
                 onChange={(e) => setZoom(+e.target.value)} className="flex-1" style={{ accentColor: C.accent }} />
@@ -2114,8 +2269,7 @@ function Editor({ v, onClose, onSave }) {
             <Tool icon={FlipHorizontal2} label="Mirror" active={flip} onClick={() => setFlip(!flip)} />
             <Tool icon={Wand2} label="Auto tone" onClick={applyAutoTone} />
             <Tool icon={Type} label="Text" active={addingText} onClick={() => setAddingText(!addingText)} />
-            <Tool icon={RefreshCw} label="Reset"
-              onClick={() => { setRot(0); setFlip(false); setBright(1); setContrast(1); setZoom(1); setOff({ x: 0, y: 0 }); }} />
+            <Tool icon={Undo2} label="Undo all" onClick={undoAll} />
           </div>
         </>
       )}
