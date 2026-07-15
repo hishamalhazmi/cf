@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>CF Tracker</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="CF Tracker">
+<meta name="theme-color" content="#0D1417">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  html, body { background: #0D1417; margin: 0; overscroll-behavior-y: none; }
+  body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+         -webkit-tap-highlight-color: transparent; }
+  #boot { color: #7B939E; font: 13px -apple-system, sans-serif; text-align: center; padding-top: 40vh; }
+</style>
+</head>
+<body>
+<div id="root"><div id="boot">Loading CF Tracker…</div></div>
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ---------- inline icon set (lucide-style strokes) ---------- */
+const IC = {
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  chevR:'<path d="m9 18 6-6-6-6"/>',
+  chevL:'<path d="m15 18-6-6 6-6"/>',
+  chevD:'<path d="m6 9 6 6 6-6"/>',
+  arrowL:'<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>',
+  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  alert:'<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+  loader:'<path d="M21 12a9 9 0 1 1-6.2-8.6"/>',
+  fileText:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+  images:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+  pencil:'<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+  refresh:'<path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/>',
+  rotate:'<path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/>',
+  flip:'<path d="M8 7 4 12l4 5M16 7l4 5-4 5M12 4v16"/>',
+  wand:'<path d="m21.6 5.4-3-3L3 18l3 3zM15 6l3 3M9 3v2M5 5l1.5 1.5M3 9h2"/>',
+  type:'<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  contrast:'<circle cx="12" cy="12" r="10"/><path d="M12 2v20a10 10 0 0 0 0-20z" fill="currentColor" stroke="none"/>',
+  skip:'<path d="M5 4l10 8-10 8zM19 5v14"/>',
+  crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  zoom:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/>',
+  video:'<rect x="1" y="5" width="15" height="14" rx="2"/><path d="m22 8-6 4 6 4z"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  play:'<path d="M5 3l14 9-14 9z"/>',
+  columns:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 3v18"/>',
+  pres:'<path d="M2 3h20M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3M12 16v3M8 22l4-3 4 3"/>',
+  fileDown:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6M9 15l3 3 3-3"/>',
+  settings:'<path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>',
+};
+function mkIcon(key) {
+  return function Ic({ size = 16, style, className, strokeWidth = 2 }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"
+      style={style} className={className} dangerouslySetInnerHTML={{ __html: IC[key] }} />;
+  };
+}
+const Plus = mkIcon('plus'), X = mkIcon('x'), Check = mkIcon('check'),
+  ChevronRight = mkIcon('chevR'), ChevronLeft = mkIcon('chevL'), ChevronDown = mkIcon('chevD'),
+  ArrowLeft = mkIcon('arrowL'), Trash2 = mkIcon('trash'), Camera = mkIcon('camera'),
+  Download = mkIcon('download'), Search = mkIcon('search'), AlertCircle = mkIcon('alert'),
+  Loader2 = mkIcon('loader'), FileText = mkIcon('fileText'), Images = mkIcon('images'),
+  Pencil = mkIcon('pencil'), RefreshCw = mkIcon('refresh'), RotateCw = mkIcon('rotate'),
+  FlipHorizontal2 = mkIcon('flip'), Wand2 = mkIcon('wand'), Type = mkIcon('type'),
+  Sun = mkIcon('sun'), Contrast = mkIcon('contrast'), SkipForward = mkIcon('skip'),
+  Crop = mkIcon('crop'), ZoomIn = mkIcon('zoom'), Video = mkIcon('video'),
+  Share2 = mkIcon('share'), Play = mkIcon('play'), Columns2 = mkIcon('columns'),
+  ImageIcon = mkIcon('images'), Presentation = mkIcon('pres'), FileDown = mkIcon('fileDown'),
+  Settings2 = mkIcon('settings'), Zap = mkIcon('wand');
+
+
+
+/* ============================================================
+   Craniofacial Case Tracker
+   cf:index / cf:p:<id> / cf:img:<id> / cf:vid:<id>:m + :i
+   ============================================================ */
+
+const STAGES = [
+  "Initial assessment", "Pre-surgical", "NAM / molding", "Active orthodontics",
+  "Post-surgical", "Retention", "Growth follow-up", "Completed",
+];
+
+const SLOT_GROUPS = [
+  { id: "eo", cols: 4, aspect: "3 / 4", slots: [
+    ["fr", "Frontal"], ["frs", "Smiling"], ["d45", "45°"], ["prof", "Profile"],
+  ]},
+  { id: "io", cols: 3, aspect: "3 / 2", slots: [
+    ["ior", "IO Right"], ["iof", "IO Front"], ["iol", "IO Left"],
+  ]},
+  { id: "ox", cols: 4, aspect: "4 / 3", slots: [
+    ["ocu", "Occl Upper"], ["ocl", "Occl Lower"], ["pan", "Panoramic"], ["ceph", "Ceph"],
+  ]},
+];
+const SLOT_NAME = Object.fromEntries(SLOT_GROUPS.flatMap((g) => g.slots));
+const SLOT_ORDER = SLOT_GROUPS.flatMap((g) => g.slots.map(([k]) => k));
+const SLOT_ASPECT = { fr: 3/4, frs: 3/4, d45: 3/4, prof: 3/4, ior: 3/2, iof: 3/2, iol: 3/2, ocu: 4/3, ocl: 4/3, pan: 16/10, ceph: 16/10 };
+const EXTRA_TYPES = ["PA X-ray", "CBCT", "Other"];
+const TONES = [
+  { id: "natural", label: "Natural" },
+  { id: "warm", label: "Warm" },
+  { id: "cool", label: "Cool" },
+];
+const CROP_RATIOS = [
+  { id: "free", label: "Free", v: null },
+  { id: "1:1", label: "1:1", v: 1 },
+  { id: "4:3", label: "4:3", v: 4 / 3 },
+  { id: "3:2", label: "3:2", v: 3 / 2 },
+  { id: "16:9", label: "16:9", v: 16 / 9 },
+];
+
+const C = {
+  bg: "#0D1417", panel: "#151F24", panel2: "#1B282E", line: "#26373F",
+  text: "#E4EDF1", muted: "#7B939E", accent: "#3FC1B0", warn: "#E0A245", danger: "#D9645C",
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const today = () => new Date().toISOString().slice(0, 10);
+const fmt = (d) => (d ? d.split("-").reverse().join("/") : "—");
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/* ---------- storage: IndexedDB — data lives on this phone ---------- */
+const DBP = new Promise((res, rej) => {
+  const q = indexedDB.open("cf-tracker", 1);
+  q.onupgradeneeded = () => q.result.createObjectStore("kv");
+  q.onsuccess = () => res(q.result);
+  q.onerror = () => rej(q.error);
+});
+const idb = (mode, fn) => DBP.then((db) => new Promise((res, rej) => {
+  const st = db.transaction("kv", mode).objectStore("kv");
+  const r = fn(st);
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+}));
+const S = {
+  async get(key) {
+    const v = await idb("readonly", (st) => st.get(key));
+    if (v === undefined) throw new Error("not found");
+    return { key, value: v };
+  },
+  async set(key, value) { await idb("readwrite", (st) => st.put(value, key)); return { key, value }; },
+  async delete(key) { await idb("readwrite", (st) => st.delete(key)); },
+};
+async function saveLarge(id, dataUrl) { await S.set(`cf:vid:${id}`, dataUrl); }
+async function loadLarge(id) { return (await S.get(`cf:vid:${id}`)).value; }
+async function deleteLarge(id) { await S.delete(`cf:vid:${id}`).catch(() => {}); }
+
+/* ---------- image helpers ---------- */
+const loadImg = (src) => new Promise((res, rej) => {
+  const img = new Image();
+  img.onload = () => res(img);
+  img.onerror = () => rej(new Error("decode failed"));
+  img.src = src;
+});
+
+async function shrinkSrc(src, maxDim, quality) {
+  const img = await loadImg(src);
+  let { width: w, height: h } = img;
+  const s = Math.min(1, maxDim / Math.max(w, h));
+  w = Math.round(w * s); h = Math.round(h * s);
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return cv.toDataURL("image/jpeg", quality);
+}
+
+const fileToDataUrl = (file) => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onerror = () => rej(new Error("read failed"));
+  r.onload = () => res(r.result);
+  r.readAsDataURL(file);
+});
+
+function autoToneCanvas(img, mode = "natural") {
+  const cv = document.createElement("canvas");
+  cv.width = img.width; cv.height = img.height;
+  const ctx = cv.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+  const d = ctx.getImageData(0, 0, cv.width, cv.height);
+  const p = d.data;
+  let r = 0, g = 0, b = 0;
+  const n = p.length / 4;
+  for (let i = 0; i < p.length; i += 4) { r += p[i]; g += p[i + 1]; b += p[i + 2]; }
+  r /= n; g /= n; b /= n;
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  const T = 132, BLEND = 0.55;
+  const cl = (x) => clamp(x, 0.85, 1.22);
+  let gr = cl(1 + BLEND * (T / (r || 1) - 1));
+  let gg = cl(1 + BLEND * (T / (g || 1) - 1));
+  let gb = cl(1 + BLEND * (T / (b || 1) - 1));
+  const lumGain = (0.299 * r * gr + 0.587 * g * gg + 0.114 * b * gb) / (lum || 1);
+  if (lumGain > 1.12) { const f = 1.12 / lumGain; gr *= f; gg *= f; gb *= f; }
+  if (mode === "warm") { gr *= 1.05; gb *= 0.95; }
+  if (mode === "cool") { gr *= 0.96; gb *= 1.05; }
+  for (let i = 0; i < p.length; i += 4) {
+    p[i] = Math.min(255, p[i] * gr);
+    p[i + 1] = Math.min(255, p[i + 1] * gg);
+    p[i + 2] = Math.min(255, p[i + 2] * gb);
+  }
+  ctx.putImageData(d, 0, 0);
+  return cv;
+}
+
+/* ============================================================ PDF writer ============================================================ */
+const b64bytes = (dataUrl) => {
+  const b = atob(dataUrl.split(",")[1]);
+  const u = new Uint8Array(b.length);
+  for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+  return u;
+};
+function jpegDims(bytes) {
+  let i = 2;
+  while (i < bytes.length - 9) {
+    if (bytes[i] !== 0xff) { i++; continue; }
+    const m = bytes[i + 1];
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+      return { h: (bytes[i + 5] << 8) | bytes[i + 6], w: (bytes[i + 7] << 8) | bytes[i + 8] };
+    }
+    const len = (bytes[i + 2] << 8) | bytes[i + 3];
+    i += 2 + len;
+  }
+  return { w: 4, h: 3 };
+}
+const pdfEsc = (s) =>
+  String(s).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)").replace(/[^\x20-\x7E]/g, "");
+const fit = (iw, ih, cw, ch) => { const s = Math.min(cw / iw, ch / ih); return { w: iw * s, h: ih * s }; };
+const wrapText = (s, max) => {
+  const out = [];
+  for (const raw of String(s).split(/\n/)) {
+    let cur = "";
+    for (const wd of raw.split(/\s+/)) {
+      if ((cur + " " + wd).trim().length > max) { if (cur.trim()) out.push(cur.trim()); cur = wd; }
+      else cur += " " + wd;
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+  return out;
+};
+
+function buildPdf(pages, imgCache) {
+  const used = [...new Set(pages.flatMap((p) => p.items.filter((i) => i.t === "img").map((i) => i.k)))];
+  const enc = new TextEncoder();
+  const chunks = []; let off = 0; const offs = {};
+  const w = (d) => { const b = typeof d === "string" ? enc.encode(d) : d; chunks.push(b); off += b.length; };
+  const obj = (num, body) => { offs[num] = off; w(`${num} 0 obj\n${body}\nendobj\n`); };
+  let n = 1;
+  const catN = n++, pagesN = n++, fontN = n++;
+  const imgN = {}; used.forEach((k) => (imgN[k] = n++));
+  const pageNs = pages.map(() => ({ p: n++, c: n++ }));
+  w("%PDF-1.4\n");
+  obj(catN, `<< /Type /Catalog /Pages ${pagesN} 0 R >>`);
+  obj(pagesN, `<< /Type /Pages /Kids [${pageNs.map((x) => x.p + " 0 R").join(" ")}] /Count ${pages.length} >>`);
+  obj(fontN, `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
+  used.forEach((k) => {
+    const im = imgCache[k];
+    offs[imgN[k]] = off;
+    w(`${imgN[k]} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bytes.length} >>\nstream\n`);
+    w(im.bytes); w("\nendstream\nendobj\n");
+  });
+  pages.forEach((pg, i) => {
+    const keys = [...new Set(pg.items.filter((x) => x.t === "img").map((x) => x.k))];
+    let cs = "";
+    pg.items.forEach((it) => {
+      if (it.t === "img") {
+        const y = pg.h - it.y - it.h;
+        cs += `q ${it.w.toFixed(2)} 0 0 ${it.h.toFixed(2)} ${it.x.toFixed(2)} ${y.toFixed(2)} cm /Im${imgN[it.k]} Do Q\n`;
+      } else {
+        const y = pg.h - it.y;
+        cs += `q ${it.g ?? 0} g BT /F1 ${it.s} Tf ${it.x.toFixed(2)} ${y.toFixed(2)} Td (${pdfEsc(it.str)}) Tj ET Q\n`;
+      }
+    });
+    obj(pageNs[i].p, `<< /Type /Page /Parent ${pagesN} 0 R /MediaBox [0 0 ${pg.w} ${pg.h}] /Resources << /Font << /F1 ${fontN} 0 R >> /XObject << ${keys.map((k) => `/Im${imgN[k]} ${imgN[k]} 0 R`).join(" ")} >> >> /Contents ${pageNs[i].c} 0 R >>`);
+    const csb = enc.encode(cs);
+    offs[pageNs[i].c] = off;
+    w(`${pageNs[i].c} 0 obj\n<< /Length ${csb.length} >>\nstream\n`); w(csb); w("\nendstream\nendobj\n");
+  });
+  const total = n, xrefOff = off;
+  let xref = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let i = 1; i < total; i++) xref += String(offs[i]).padStart(10, "0") + " 00000 n \n";
+  w(xref);
+  w(`trailer\n<< /Size ${total} /Root ${catN} 0 R >>\nstartxref\n${xrefOff}\n%%EOF`);
+  return new Blob(chunks, { type: "application/pdf" });
+}
+
+async function loadImages(rec) {
+  const cache = {};
+  for (const set of rec.sets) {
+    const entries = [...Object.values(set.slots || {}), ...(set.extras || []).filter((x) => !x.video)];
+    for (const e of entries) {
+      if (cache[e.id]) continue;
+      try {
+        const r = await S.get(`cf:img:${e.id}`);
+        const bytes = b64bytes(r.value);
+        const { w, h } = jpegDims(bytes);
+        cache[e.id] = { bytes, w, h };
+      } catch {}
+    }
+  }
+  return cache;
+}
+
+const KEY_FIELDS = [
+  ["Age", "age"], ["Angle class", "angle"], ["Overjet", "oj"], ["Overbite", "ob"],
+  ["SNA", "sna"], ["SNB", "snb"], ["ANB", "anb"],
+  ["Diagnosis", "diagnose"], ["Therapy", "th1"],
+];
+
+async function exportReport(rec) {
+  const cache = await loadImages(rec);
+  const W = 595, H = 842, M = 40;
+  const pages = [];
+  let pg = { w: W, h: H, items: [] };
+  let y = 52;
+  const nl = (need) => { if (y + need > H - 36) { pages.push(pg); pg = { w: W, h: H, items: [] }; y = 48; } };
+  const txt = (x, yy, s, str, g) => pg.items.push({ t: "txt", x, y: yy, s, str, g });
+
+  txt(M, y, 18, `Case ${rec.code}`); y += 20;
+  if (rec.dx) { txt(M, y, 10, rec.dx, 0.35); y += 14; }
+  txt(M, y, 9, `Stage: ${rec.stage}${rec.next ? `   ·   Next visit: ${fmt(rec.next)}` : ""}`, 0.35); y += 18;
+
+  const lines = [];
+  for (const [label, key] of KEY_FIELDS) {
+    const v = (rec.chart?.[key] || "").trim();
+    if (v) lines.push(...wrapText(`${label}: ${v}`, 100));
+  }
+  if (rec.notes?.trim()) lines.push(...wrapText(`Notes: ${rec.notes.trim()}`, 100));
+  if (lines.length) {
+    txt(M, y, 10, "Key findings"); y += 13;
+    for (const l of lines) { nl(11); txt(M, y, 8, l, 0.25); y += 11; }
+    y += 6;
+  }
+
+  const sets = [...rec.sets].sort((a, b) => a.date.localeCompare(b.date));
+  const CW = 165, CH = 132, GAP = 10;
+  for (let si = 0; si < sets.length; si++) {
+    const set = sets[si];
+    const entries = [
+      ...SLOT_ORDER.filter((sid) => set.slots?.[sid]).map((sid) => ({ ...set.slots[sid], name: SLOT_NAME[sid] })),
+      ...(set.extras || []).filter((x) => !x.video).map((e) => ({ ...e, name: e.label })),
+    ];
+    if (!entries.length) continue;
+    nl(30 + CH);
+    txt(M, y, 12, `Session ${si + 1} — ${fmt(set.date)}`); y += 16;
+    let col = 0;
+    for (const e of entries) {
+      if (!cache[e.id]) continue;
+      if (col === 3) { col = 0; y += CH + 20; nl(CH + 20); }
+      const x = M + col * (CW + GAP);
+      const im = cache[e.id];
+      const f = fit(im.w, im.h, CW, CH);
+      pg.items.push({ t: "img", k: e.id, x: x + (CW - f.w) / 2, y: y + (CH - f.h) / 2, w: f.w, h: f.h });
+      txt(x, y + CH + 10, 7, e.name, 0.4);
+      col++;
+    }
+    y += CH + 30;
+  }
+  pages.push(pg);
+  return buildPdf(pages, cache);
+}
+
+async function exportPresentation(rec) {
+  const cache = await loadImages(rec);
+  const W = 842, H = 595, M = 40, gap = 12;
+  const pages = [];
+  const sets = [...rec.sets].sort((a, b) => a.date.localeCompare(b.date));
+
+  const t = { w: W, h: H, items: [] };
+  t.items.push({ t: "txt", x: M, y: 260, s: 30, str: `Case ${rec.code}` });
+  if (rec.dx) t.items.push({ t: "txt", x: M, y: 290, s: 14, str: rec.dx, g: 0.35 });
+  t.items.push({ t: "txt", x: M, y: 320, s: 11, str: `${sets.length} sessions · ${fmt(sets[0]?.date)} — ${fmt(sets[sets.length - 1]?.date)}`, g: 0.45 });
+  pages.push(t);
+
+  const cell = (pg, e, x, y, cw, ch, name) => {
+    const im = cache[e.id];
+    if (!im) return;
+    const f = fit(im.w, im.h, cw, ch);
+    pg.items.push({ t: "img", k: e.id, x: x + (cw - f.w) / 2, y: y + (ch - f.h) / 2, w: f.w, h: f.h });
+    pg.items.push({ t: "txt", x, y: y + ch + 11, s: 7, str: name, g: 0.45 });
+  };
+
+  sets.forEach((set, si) => {
+    const pg = { w: W, h: H, items: [] };
+    pg.items.push({ t: "txt", x: M, y: 34, s: 16, str: `Session ${si + 1} — ${fmt(set.date)}` });
+    const eoW = 178, eoH = 190;
+    SLOT_GROUPS[0].slots.forEach(([sid, sname], i) => {
+      const e = set.slots?.[sid];
+      if (e) cell(pg, e, M + i * (eoW + gap), 50, eoW, eoH, sname);
+    });
+    const ioW = 246, ioH = 128;
+    SLOT_GROUPS[1].slots.forEach(([sid, sname], i) => {
+      const e = set.slots?.[sid];
+      if (e) cell(pg, e, M + i * (ioW + gap), 262, ioW, ioH, sname);
+    });
+    const bW = 178, bH = 128;
+    SLOT_GROUPS[2].slots.forEach(([sid, sname], i) => {
+      const e = set.slots?.[sid];
+      if (e) cell(pg, e, M + i * (bW + gap), 412, bW, bH, sname);
+    });
+    pages.push(pg);
+
+    const extras = (set.extras || []).filter((x) => !x.video);
+    if (extras.length) {
+      const xp = { w: W, h: H, items: [] };
+      xp.items.push({ t: "txt", x: M, y: 34, s: 14, str: `Session ${si + 1} — ${fmt(set.date)} · additional records` });
+      const cw = 178, ch = 190;
+      extras.slice(0, 8).forEach((e, i) => {
+        const col = i % 4, row = Math.floor(i / 4);
+        cell(xp, e, M + col * (cw + gap), 50 + row * (ch + 34), cw, ch, e.label);
+      });
+      pages.push(xp);
+    }
+  });
+  return buildPdf(pages, cache);
+}
+
+/* ============================================================ CHART SCHEMA ============================================================ */
+const CHART = [
+  { id: "info", title: "Patient Info", f: [
+    ["age", "Age"], ["dob", "Date of birth"], ["exam", "Date of examination"],
+    ["btrec", "BT-records date"], ["sboard", "S-board"], ["sup", "Supervisor"],
+  ]},
+  { id: "hist", title: "Complaint & Patient History", f: [
+    ["cc", "Chief complaint / reason for referral", "", 1],
+    ["gh", "General health / diseases"], ["med", "Medication"], ["alg", "Allergy"],
+    ["tra", "Trauma"], ["extres", "Extractions, restorations"], ["brx", "Bruxism"],
+    ["ohab", "Oral habits"], ["mjs", "Muscle / joint symptoms"],
+    ["prevtx", "Previous orthodontic treatment"], ["hd", "Headache"], ["her", "Heredity"],
+  ]},
+  { id: "extra", title: "Clinical Evaluation — Extra-oral", f: [
+    ["body", "Body size", "normal / thin / overweight"],
+    ["devel", "General development: height / menarche", "cm"],
+    ["face", "Shape of face", "oval / round / rectangular"],
+    ["asym", "Mandibular asymmetry", "none / towards R / L"],
+    ["prof", "Profile", "normal / pronounced convexity / straight / concave"],
+    ["tfh", "Total facial height", "normal / long / short"],
+    ["lfh", "Lower facial height", "normal / long / short"],
+    ["nla", "Nasolabial angle", "normal / large / small (norm 100°)"],
+    ["jaw", "Jaw angle", "normal / obtuse / acute"],
+    ["mang", "Mandibular angulation", "normal / steep / horizontal"],
+    ["ull", "Upper lip length", "normal / short / long"],
+    ["lipinc", "Lip incompetence", "yes / no"],
+    ["ment", "Mentalis activity", "yes / no"],
+    ["liprel", "Lip relation"], ["lipstep", "Lip step"], ["seg3", "Three segments"],
+  ]},
+  { id: "func", title: "Oral Functions", f: [
+    ["resp", "Respiration", "nose / mouth / combined"],
+    ["speech", "Speech deviations"],
+    ["fbsag", "Forced bite — sagittally", "mm"],
+    ["fblat", "Forced bite — laterally", "right / left, mm"],
+    ["mmo", "Maximal mouth opening", "mm"],
+    ["tmj", "Pain at palpation of TMJ", "right / left"],
+    ["mast", "Pain at palpation of masticatory muscles"],
+    ["swal", "Swallowing"], ["breath", "Breathing"], ["habits", "Habits"],
+  ]},
+  { id: "intra", title: "Intra-oral Examination", f: [
+    ["mlmax", "Midline deviation — maxilla", "right / left, mm"],
+    ["mlmand", "Midline deviation — mandible", "right / left, mm"],
+    ["frenum", "Midline frenum (maxilla / mandible)", "normal / abnormal"],
+    ["hyg", "Oral hygiene", "very good / average / poor"],
+    ["fill", "Fillings, caries"],
+    ["ging", "Gingival conditions", "normal / gingivitis locally / general"],
+    ["tons", "Tonsils", "normal / large / removed"],
+    ["tongue", "Tongue impressions", "yes / no"],
+    ["morph", "Deviation in tooth morphology", "none / malformed / discoloured / hypoplasia"],
+    ["can13", "Palpable upper canine 13 (if not erupted)", "yes / no"],
+    ["can23", "Palpable upper canine 23 (if not erupted)", "yes / no"],
+    ["pock", "Pockets"], ["prem", "Prematurely missing"],
+    ["iofind", "Other findings", "", 1],
+  ]},
+  { id: "steiner", title: "Cephalometrics — Steiner", f: [
+    ["sna", "SNA", "norm 82°"], ["snb", "SNB", "norm 80°"], ["anb", "ANB", "norm 2°"],
+    ["u1namm", "+1 to NA (mm)", "norm 4 mm"], ["u1na", "+1 to NA (°)", "norm 22°"],
+    ["l1nbmm", "−1 to NB (mm)", "norm 4 mm"], ["l1nb", "−1 to NB (°)", "norm 25°"],
+    ["pgnb", "Pg to NB (mm)"], ["pgl1", "Pg & −1 to NB (d)"],
+    ["inter", "+1 to −1", "norm 131°"], ["occsn", "Occl to SN", "norm 14°"],
+    ["gogn", "GoGn to SN", "norm 32°"], ["wits", "Wits", "norm 0 mm"],
+    ["tweed", "Tweed (FMA)", "norm 25°"],
+  ]},
+  { id: "downs", title: "Cephalometrics — Downs", f: [
+    ["faca", "Facial angle", "norm 87.8°"], ["acvx", "Angle of convexity", "norm 0°"],
+    ["abpa", "A-B plane", "norm −4.6°"], ["mpa", "Mandibular plane", "norm 21.9°"],
+    ["yaxis", "Y-axis", "norm 59.4°"], ["opa", "Occlusal plane", "norm 9.3°"],
+    ["dinter", "+1 to −1", "norm 135.4°"], ["toop", "+1 to OP", "norm 14.5°"],
+    ["tomp", "−1 to MP", "norm 91.5°"], ["cvm", "Cervical stage of maturation", "CS1–CS6"],
+  ]},
+  { id: "xray", title: "Roentgen Analysis", f: [
+    ["xcaries", "Caries"], ["missing", "Teeth missing"], ["notformed", "Teeth missing, not formed"],
+    ["rootres", "Root resorption"], ["periap", "Periapical abnormality"],
+    ["pos8", "Position of 8s"], ["apicalu", "Apical area — U", "A / M / P"],
+    ["apicall", "Apical area — L", "A / M / P"],
+    ["preme", "Premature eruption"], ["preml", "Premature loss of deciduous tooth"],
+    ["supern", "Supernumerary tooth"], ["persist", "Persisting deciduous tooth"],
+    ["impact", "Impacted tooth"], ["agen", "Agenesis"],
+    ["rfrac", "Root fracture"], ["rrem", "Root remnant"], ["rfill", "Root filling"],
+    ["rshape", "Deviating root shape"], ["transp", "Transposition"], ["atyp", "Atypical position"],
+    ["perio", "Periodontal conditions"], ["pulp", "Pulp conditions"], ["deepf", "Deep fillings"],
+    ["follicle", "Enlarged dental follicle"], ["condyle", "Condyle"],
+    ["special", "Special features / other findings", "", 1],
+  ]},
+  { id: "cast", title: "Cast Analysis", f: [
+    ["oj", "Overjet", "mm"], ["ob", "Overbite", "mm"],
+    ["molr", "Molar relation — right", "Angle class"], ["moll", "Molar relation — left"],
+    ["canr", "Canine relation — right"], ["canl", "Canine relation — left"],
+    ["supra", "Supraocclusion"], ["infra", "Infraocclusion"],
+    ["spee", "Curve of Spee", "extreme / normal / flat / inverted"],
+    ["cmlmax", "Midline — maxilla", "correct / towards R / L, mm"],
+    ["cmlmand", "Midline — mandible", "correct / towards R / L, mm"],
+    ["cross", "Crossbite"], ["scissor", "Scissors bite"], ["diast", "Median diastema", "mm"],
+    ["apbmax", "Apical base — maxilla", "wide / normal / small"],
+    ["apbmand", "Apical base — mandible", "wide / normal / small"],
+    ["archmax", "Arch form — maxilla", "ellipse / narrow / broad / Ω-shaped"],
+    ["archmand", "Arch form — mandible", "parabola / narrow / broad / Ω-shaped"],
+    ["migr", "Migration of teeth"], ["rot", "Rotations"],
+    ["cmorph", "Morphologic deviation of teeth"], ["abpos", "Abnormal position"],
+    ["aldu", "ALD / MDA — U", "mm"], ["aldl", "ALD / MDA — L", "mm"], ["tsd", "TSD", "%"],
+    ["transocc", "Transversal occlusion"], ["openb", "Open bite"], ["palb", "Palatal bite"],
+  ]},
+  { id: "space", title: "Space Analysis & Bolton", f: [
+    ["mxspace", "Maxilla — space", "R buffer / front / L buffer"],
+    ["mxneed", "Maxilla — need"], ["mxdiff", "Maxilla — difference"],
+    ["mdspace", "Mandible — space", "R buffer / front / L buffer"],
+    ["mdneed", "Mandible — need"], ["mddiff", "Mandible — difference"],
+    ["bolton", "Bolton discrepancy", "narrower / wider upper front teeth"],
+    ["boltmm", "Size of discrepancy", "mm"],
+  ]},
+  { id: "dx", title: "Diagnosis", f: [
+    ["ftype", "Facial type"], ["sagrel", "Sagittal basal relation"],
+    ["vertrel", "Vertical basal relation"], ["angle", "Occlusion / Angle class"],
+    ["dxoj", "Overjet"], ["dxob", "Overbite"],
+    ["dxtrans", "Transversal posterior relations"], ["dxml", "Midline deviations"],
+    ["dxspace", "Space conditions"], ["dontia", "Hypo / hyperdontia"],
+    ["dxpos", "Positional deviations"], ["classif", "Classification"],
+    ["dxother", "Other diagnosis"],
+    ["diagnose", "Diagnosis (summary)", "", 1],
+  ]},
+  { id: "plan", title: "Etiology & Treatment Plan", f: [
+    ["etio", "Etiology of malocclusion", "", 1],
+    ["need", "Treatment need / consequences of malocclusion", "", 1],
+    ["obj", "Treatment objectives", "", 1],
+    ["opt", "Treatment options", "", 1],
+    ["th1", "Therapy ①", "", 1], ["th2", "Therapy ②", "", 1],
+    ["motiv", "Motivation of treatment choice"],
+    ["exmax", "Extractions — maxilla"], ["exmand", "Extractions — mandible"],
+    ["moves", "Tooth movements", "", 1],
+    ["anch", "Anchorage situation", "maxilla: max/average/min · mandible: max/average/min"],
+    ["eoanch", "Extraoral anchorage", "max / mand / intermax"],
+    ["ioanch", "Intraoral anchorage", "max / mand"],
+    ["appl", "Appliance"], ["wiremax", "Wire sequence — max"], ["wiremand", "Wire sequence — mand"],
+  ]},
+  { id: "outcome", title: "Treatment Time, Retention & Prognosis", f: [
+    ["txtime", "Treatment time"], ["txcode", "Code for treatment", "d/t"],
+    ["ret", "Retention", "U / L"], ["rettime", "Retention time", "duration"],
+    ["progocc", "Prognosis — occlusion"], ["progdur", "Prognosis — Tx duration"],
+    ["alt", "Alternative treatment(s) discussed"],
+  ]},
+];
+
+/* ============================================================ APP ============================================================ */
+function App() {
+  const [index, setIndex] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [openId, setOpenId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await S.get("cf:index");
+        setIndex(r ? JSON.parse(r.value) : []);
+      } catch { setIndex([]); }
+      setLoading(false);
+    })();
+  }, []);
+
+  const saveIndex = useCallback(async (next) => {
+    setIndex(next);
+    await S.set("cf:index", JSON.stringify(next));
+  }, []);
+
+  const addPatient = async (code, dx, stage) => {
+    const id = uid();
+    const rec = { id, code, dx, stage, notes: "", next: "", sets: [], chart: {} };
+    await S.set(`cf:p:${id}`, JSON.stringify(rec));
+    await saveIndex([{ id, code, stage, next: "" }, ...index]);
+    setAdding(false);
+    setOpenId(id);
+  };
+
+
+  const [backingUp, setBackingUp] = useState(false);
+  const exportBackup = async () => {
+    setBackingUp(true);
+    try {
+      const out = { exported: new Date().toISOString(), app: "cf-tracker", patients: [] };
+      for (const p of index) {
+        try {
+          const r = await S.get(`cf:p:${p.id}`);
+          const rec = JSON.parse(r.value);
+          for (const set of rec.sets || []) {
+            for (const sid of Object.keys(set.slots || {})) {
+              try { set.slots[sid].data = (await S.get(`cf:img:${set.slots[sid].id}`)).value; } catch {}
+            }
+            for (const ex of set.extras || []) {
+              if (!ex.video) { try { ex.data = (await S.get(`cf:img:${ex.id}`)).value; } catch {} }
+            }
+          }
+          out.patients.push(rec);
+        } catch {}
+      }
+      const blob = new Blob([JSON.stringify(out)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `cf-backup-${today()}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch {}
+    setBackingUp(false);
+  };
+
+  const overdue = (d) => d && d < today();
+  const list = index.filter((p) => !q || p.code.toLowerCase().includes(q.toLowerCase()));
+
+  if (openId) {
+    return (
+      <Patient id={openId}
+        onBack={() => setOpenId(null)}
+        onMeta={(m) => saveIndex(index.map((p) => (p.id === openId ? { ...p, ...m } : p)))}
+        onDelete={async () => { await saveIndex(index.filter((p) => p.id !== openId)); setOpenId(null); }} />
+    );
+  }
+
+  return (
+    <div style={{ background: C.bg, color: C.text, minHeight: "100vh" }} className="font-sans antialiased">
+      <div className="max-w-2xl mx-auto pb-44">
+        <header className="px-4 pt-5 pb-3 flex items-start justify-between">
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight">Case Register</h1>
+            <p className="text-[11px] mt-0.5" style={{ color: C.muted }}>{index.length} case{index.length === 1 ? "" : "s"} on record · stored on this phone</p>
+          </div>
+          <div className="flex gap-2">
+          <button onClick={() => window.location.reload()}
+            className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg"
+            style={{ background: C.panel, color: C.muted, border: `1px solid ${C.line}` }}>
+            <RefreshCw size={12} /> Reload
+          </button>
+          {index.length > 0 && (
+            <button onClick={exportBackup} disabled={backingUp}
+              className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg"
+              style={{ background: C.panel, color: C.muted, border: `1px solid ${C.line}` }}>
+              {backingUp ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />} Backup
+            </button>
+          )}
+          </div>
+        </header>
+
+        {index.length > 4 && (
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                 style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+              <Search size={14} style={{ color: C.muted }} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by case code"
+                className="bg-transparent outline-none text-sm w-full" style={{ color: C.text }} />
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="mx-4 mb-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+               style={{ background: "#3B2B12", color: C.warn }}>
+            <AlertCircle size={14} /> {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-20"><Loader2 className="animate-spin" style={{ color: C.muted }} /></div>
+        ) : list.length === 0 ? (
+          <div className="mx-4 mt-4 px-6 py-12 rounded-2xl text-center" style={{ border: `1px dashed ${C.line}` }}>
+            <p className="text-sm">No cases yet</p>
+            <p className="text-xs mt-2 leading-relaxed" style={{ color: C.muted }}>
+              Add your first case with a reference code — e.g. <span style={{ color: C.accent }}>CF-001</span>.
+            </p>
+          </div>
+        ) : (
+          <ul className="px-4 space-y-2">
+            {list.map((p) => (
+              <li key={p.id}>
+                <button onClick={() => setOpenId(p.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left active:opacity-70"
+                  style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm tabular-nums">{p.code}</span>
+                      {overdue(p.next) && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded"
+                              style={{ background: "#3B2B12", color: C.warn }}>overdue</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] mt-1 flex items-center gap-2" style={{ color: C.muted }}>
+                      <span>{p.stage}</span>
+                      {p.next && <><span style={{ color: C.line }}>•</span><span className="tabular-nums">{fmt(p.next)}</span></>}
+                    </div>
+                  </div>
+                  <ChevronRight size={15} style={{ color: C.line }} className="shrink-0" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <button onClick={() => setAdding(true)}
+        className="fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold shadow-2xl active:scale-95 transition-transform"
+        style={{ background: C.accent, color: "#06231F" }}>
+        <Plus size={16} strokeWidth={2.6} /> New case
+      </button>
+
+      {adding && <AddPatient onClose={() => setAdding(false)} onSave={addPatient} />}
+    </div>
+  );
+}
+
+/* ---------------- shared UI ---------------- */
+function Sheet({ onClose, title, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+         style={{ background: "rgba(0,0,0,.6)" }} onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5"
+        style={{ background: C.panel2, border: `1px solid ${C.line}`, paddingBottom: 88 }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-sm">{title}</h2>
+          <button onClick={onClose}><X size={18} style={{ color: C.muted }} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const sheetBtnStyle = (accent) => ({
+  background: accent ? C.accent : C.panel,
+  color: accent ? "#06231F" : C.text,
+  border: `1px solid ${accent ? C.accent : C.line}`,
+  fontWeight: accent ? 600 : 400,
+});
+
+function SheetBtn({ icon: Icon, onClick, children, accent }) {
+  return (
+    <button onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm mb-2"
+      style={sheetBtnStyle(accent)}>
+      <Icon size={16} /> {children}
+    </button>
+  );
+}
+
+function FileBtn({ icon: Icon, children, accent, accept, capture, onSelect }) {
+  return (
+    <label className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm mb-2 cursor-pointer"
+      style={sheetBtnStyle(accent)}>
+      <Icon size={16} /> {children}
+      <input type="file" accept={accept} {...(capture ? { capture } : {})}
+        style={{ display: "none" }}
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onSelect(f); }} />
+    </label>
+  );
+}
+
+function Chip({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} className="text-xs px-3 py-1.5 rounded-lg"
+      style={{
+        background: active ? C.accent : C.panel,
+        color: active ? "#06231F" : C.muted,
+        border: `1px solid ${active ? C.accent : C.line}`,
+        fontWeight: active ? 600 : 400,
+      }}>{children}</button>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="mb-3">
+      <p className="text-xs mb-1.5" style={{ color: C.muted }}>{label}</p>
+      <div className="px-3.5 py-3 rounded-xl" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AddPatient({ onClose, onSave }) {
+  const [code, setCode] = useState("");
+  const [dx, setDx] = useState("");
+  const [stage, setStage] = useState(STAGES[0]);
+
+  return (
+    <Sheet onClose={onClose} title="New case">
+      <Field label="Reference code">
+        <input autoFocus value={code} onChange={(e) => setCode(e.target.value)} placeholder="CF-001"
+          className="w-full bg-transparent outline-none text-sm tabular-nums" style={{ color: C.text }} />
+      </Field>
+      <Field label="Short diagnosis">
+        <input value={dx} onChange={(e) => setDx(e.target.value)} placeholder="Complete left UCLP"
+          className="w-full bg-transparent outline-none text-sm" style={{ color: C.text }} />
+      </Field>
+      <p className="text-xs mb-2 mt-3" style={{ color: C.muted }}>Treatment stage</p>
+      <div className="flex flex-wrap gap-1.5 mb-5">
+        {STAGES.map((s) => <Chip key={s} active={stage === s} onClick={() => setStage(s)}>{s}</Chip>)}
+      </div>
+      <button disabled={!code.trim()} onClick={() => onSave(code.trim(), dx.trim(), stage)}
+        className="w-full py-3 rounded-xl text-sm font-semibold disabled:opacity-30"
+        style={{ background: C.accent, color: "#06231F" }}>
+        Save case
+      </button>
+      <p className="text-[11px] text-center mt-3" style={{ color: C.muted }}>
+        Use a reference code instead of the name and file number.
+      </p>
+    </Sheet>
+  );
+}
+
+/* ---------------- In-app camera (getUserMedia) ---------------- */
+function CameraView({ title, onShot, onClose, fallback }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [err, setErr] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1920 } },
+          audio: false,
+        });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setReady(true);
+      } catch { setErr(true); }
+    })();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const shoot = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const cv = document.createElement("canvas");
+    cv.width = v.videoWidth;
+    cv.height = v.videoHeight;
+    cv.getContext("2d").drawImage(v, 0, 0);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    onShot(cv.toDataURL("image/jpeg", 0.9));
+  };
+
+  if (err) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: "rgba(0,0,0,.75)" }}>
+        <div className="w-full max-w-sm mx-4 rounded-2xl p-5" style={{ background: C.panel2, border: `1px solid ${C.line}` }}>
+          <p className="text-sm font-semibold mb-2" style={{ color: C.text }}>Camera not available here</p>
+          <p className="text-xs leading-relaxed mb-4" style={{ color: C.muted }}>
+            This app environment blocks direct camera access. Use one of these instead:
+          </p>
+          <FileBtn icon={Camera} accent accept="image/*" capture="environment" onSelect={(f) => fallback(f)}>
+            System camera
+          </FileBtn>
+          <FileBtn icon={ImageIcon} accept="image/*" onSelect={(f) => fallback(f)}>
+            Choose from library
+          </FileBtn>
+          <button onClick={onClose} className="w-full py-2.5 rounded-xl text-xs mt-1"
+            style={{ background: C.panel, color: C.muted, border: `1px solid ${C.line}` }}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col" style={{ background: "#000", paddingBottom: 80 }}>
+      <div className="flex items-center justify-between px-5 py-3">
+        <button onClick={onClose}><X size={20} style={{ color: C.text }} /></button>
+        <p className="text-sm font-semibold" style={{ color: C.text }}>{title}</p>
+        <span className="w-5" />
+      </div>
+      <div className="flex-1 flex items-center justify-center overflow-hidden">
+        <video ref={videoRef} playsInline muted className="max-w-full max-h-full object-contain" />
+      </div>
+      <div className="flex justify-center py-5">
+        <button onClick={shoot} disabled={!ready}
+          className="w-16 h-16 rounded-full border-4 disabled:opacity-40 active:scale-90 transition-transform"
+          style={{ borderColor: "#fff", background: C.accent }} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Patient ---------------- */
+function Patient({ id, onBack, onMeta, onDelete }) {
+  const [rec, setRec] = useState(null);
+  const [tab, setTab] = useState("records");
+  const [busy, setBusy] = useState(false);
+  const [matching, setMatching] = useState("");
+  const [exporting, setExporting] = useState("");
+  const [toast, setToast] = useState("");
+  const [viewer, setViewer] = useState(null);
+  const [editor, setEditor] = useState(null);
+  const [camera, setCamera] = useState(null);       // {target, name}
+  const [compare, setCompare] = useState(false);
+  const [picked, setPicked] = useState([]);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const [sheet, setSheet] = useState(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const saveTimer = useRef(null);
+  const guidedNext = useRef(null);                   // {setId, slot} to continue after editor
+  const recRef = useRef(null);
+  recRef.current = rec;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await S.get(`cf:p:${id}`);
+        const p = JSON.parse(r.value);
+        if (!p.chart) p.chart = {};
+        if (!p.sets) p.sets = [];
+        p.sets.forEach((s) => { if (!s.extras) s.extras = []; });
+        setRec(p);
+      } catch {
+        setRec({ id, code: "?", dx: "", stage: STAGES[0], notes: "", next: "", sets: [], chart: {} });
+      }
+    })();
+    return () => clearTimeout(saveTimer.current);
+  }, [id]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const persist = async (next) => {
+    setRec(next);
+    await S.set(`cf:p:${id}`, JSON.stringify(next));
+    onMeta({ code: next.code, stage: next.stage, next: next.next });
+    return next;
+  };
+
+  const setChart = (fid, val) => {
+    setRec((prev) => {
+      const next = { ...prev, chart: { ...prev.chart, [fid]: val } };
+      clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => S.set(`cf:p:${id}`, JSON.stringify(next)), 500);
+      return next;
+    });
+  };
+
+  const nextEmptySlot = (sets, setId, afterSlot) => {
+    const set = sets.find((s) => s.id === setId);
+    if (!set) return null;
+    const start = afterSlot ? SLOT_ORDER.indexOf(afterSlot) + 1 : 0;
+    for (let i = start; i < SLOT_ORDER.length; i++) {
+      if (!set.slots[SLOT_ORDER[i]]) return SLOT_ORDER[i];
+    }
+    return null;
+  };
+
+  const openSource = (setId, slotId) =>
+    setSheet({ kind: "source", target: { setId, slot: slotId, guided: true }, name: SLOT_NAME[slotId] });
+
+  const newSet = async () => {
+    const s = { id: uid(), date: today(), slots: {}, extras: [] };
+    await persist({ ...rec, sets: [s, ...rec.sets] });
+    openSource(s.id, SLOT_ORDER[0]);
+  };
+
+  const refKey = (x) => x.setId + "|" + x.ref;
+  const pick = (me) =>
+    setPicked((p) => {
+      if (p.some((x) => refKey(x) === refKey(me))) return p.filter((x) => refKey(x) !== refKey(me));
+      return p.length < 2 ? [...p, me] : [p[1], me];
+    });
+
+  const buildViewList = (set) => [
+    ...SLOT_ORDER.filter((sid) => set.slots[sid]).map((sid) => ({
+      name: SLOT_NAME[sid], imgId: set.slots[sid].id, thumb: set.slots[sid].thumb,
+      target: { setId: set.id, slot: sid }, aspect: SLOT_ASPECT[sid],
+    })),
+    ...set.extras.map((ex) => ({
+      name: ex.label, imgId: ex.id, thumb: ex.thumb, video: !!ex.video,
+      target: { setId: set.id, extraId: ex.eid }, aspect: 4 / 3,
+    })),
+  ];
+
+  const tapSlot = (setId, slotId) => {
+    const set = rec.sets.find((s) => s.id === setId);
+    const im = set?.slots[slotId];
+    if (compare) { if (im) pick({ setId, ref: "s:" + slotId }); return; }
+    if (im) {
+      const list = buildViewList(set);
+      setViewer({ list, idx: list.findIndex((v) => v.target.slot === slotId) });
+    } else {
+      openSource(setId, slotId);
+    }
+  };
+
+  const tapExtra = (setId, ex) => {
+    if (compare) { if (!ex.video) pick({ setId, ref: "e:" + ex.eid }); return; }
+    const set = rec.sets.find((s) => s.id === setId);
+    const list = buildViewList(set);
+    setViewer({ list, idx: list.findIndex((v) => v.target.extraId === ex.eid) });
+  };
+
+  /* ---- media intake: save then open editor immediately ---- */
+  const intake = async (dataUrl, t) => {
+    setSheet(null);
+    setCamera(null);
+    setBusy(true);
+    try {
+      const [full, thumb] = await Promise.all([shrinkSrc(dataUrl, 1600, 0.82), shrinkSrc(dataUrl, 300, 0.65)]);
+      const iid = uid();
+      await S.set(`cf:img:${iid}`, full);
+      const cur = recRef.current;
+      let target = null;
+      const sets = cur.sets.map((s) => {
+        if (s.id !== t.setId) return s;
+        if (t.slot) {
+          const old = s.slots[t.slot];
+          if (old) S.delete(`cf:img:${old.id}`).catch(() => {});
+          target = { setId: s.id, slot: t.slot };
+          return { ...s, slots: { ...s.slots, [t.slot]: { id: iid, thumb } } };
+        }
+        if (t.extraId) {
+          target = { setId: s.id, extraId: t.extraId };
+          return { ...s, extras: s.extras.map((x) => {
+            if (x.eid !== t.extraId) return x;
+            if (x.video) deleteLarge(x.id); else S.delete(`cf:img:${x.id}`).catch(() => {});
+            return { ...x, id: iid, thumb, video: false };
+          })};
+        }
+        const eid = uid();
+        target = { setId: s.id, extraId: eid };
+        return { ...s, extras: [...s.extras, { eid, id: iid, thumb, label: t.extraLabel || "Other" }] };
+      });
+      await persist({ ...cur, sets });
+      /* open editor immediately; remember guided continuation */
+      guidedNext.current = t.slot && t.guided ? { setId: t.setId, after: t.slot } : null;
+      const aspect = t.slot ? SLOT_ASPECT[t.slot] : 4 / 3;
+      const name = t.slot ? SLOT_NAME[t.slot] : (t.extraLabel || "Photo");
+      setEditor({ name, imgId: iid, aspect, target });
+    } catch { setToast("Could not read that image."); }
+    setBusy(false);
+  };
+
+  const finishEdit = () => {
+    setEditor(null);
+    const g = guidedNext.current;
+    guidedNext.current = null;
+    if (g) {
+      const nxt = nextEmptySlot(recRef.current.sets, g.setId, g.after);
+      if (nxt) openSource(g.setId, nxt);
+    }
+  };
+
+  const handleVideo = async (file, t) => {
+    setSheet(null);
+    setBusy(true);
+    try {
+      if (file.size > 20 * 1024 * 1024) throw new Error("big");
+      const raw = await fileToDataUrl(file);
+      const meta = await new Promise((res, rej) => {
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        v.muted = true;
+        v.playsInline = true;
+        v.src = raw;
+        v.onloadeddata = () => {
+          try {
+            const cv = document.createElement("canvas");
+            const s = Math.min(1, 300 / Math.max(v.videoWidth, v.videoHeight));
+            cv.width = Math.round(v.videoWidth * s);
+            cv.height = Math.round(v.videoHeight * s);
+            cv.getContext("2d").drawImage(v, 0, 0, cv.width, cv.height);
+            res({ dur: v.duration, poster: cv.toDataURL("image/jpeg", 0.6) });
+          } catch { res({ dur: v.duration, poster: null }); }
+        };
+        v.onerror = () => rej(new Error("bad video"));
+      });
+      if (meta.dur > 12) { setToast("Video too long — keep it under 10 seconds."); setBusy(false); return; }
+      const iid = uid();
+      await saveLarge(iid, raw);
+      const cur = recRef.current;
+      const sets = cur.sets.map((s) =>
+        s.id !== t.setId ? s : { ...s, extras: [...s.extras, { eid: uid(), id: iid, thumb: meta.poster, label: "Video", video: true }] });
+      await persist({ ...cur, sets });
+    } catch (e) {
+      setToast(e.message === "big" ? "Video too large — keep it under 10 seconds." : "Could not read that video.");
+    }
+    setBusy(false);
+  };
+
+  const clearTarget = async (t) => {
+    const sets = rec.sets.map((s) => {
+      if (s.id !== t.setId) return s;
+      if (t.slot) {
+        const old = s.slots[t.slot];
+        if (old) S.delete(`cf:img:${old.id}`).catch(() => {});
+        const slots = { ...s.slots }; delete slots[t.slot];
+        return { ...s, slots };
+      }
+      const ex = s.extras.find((x) => x.eid === t.extraId);
+      if (ex) { if (ex.video) deleteLarge(ex.id); else S.delete(`cf:img:${ex.id}`).catch(() => {}); }
+      return { ...s, extras: s.extras.filter((x) => x.eid !== t.extraId) };
+    });
+    await persist({ ...rec, sets });
+    setViewer(null);
+  };
+
+  const replaceImage = async (t, fullDataUrl) => {
+    const thumb = await shrinkSrc(fullDataUrl, 300, 0.65);
+    const cur = recRef.current;
+    let imgId = null;
+    const sets = cur.sets.map((s) => {
+      if (s.id !== t.setId) return s;
+      if (t.slot) {
+        imgId = s.slots[t.slot]?.id;
+        return { ...s, slots: { ...s.slots, [t.slot]: { ...s.slots[t.slot], thumb } } };
+      }
+      return { ...s, extras: s.extras.map((x) => {
+        if (x.eid !== t.extraId) return x;
+        imgId = x.id;
+        return { ...x, thumb };
+      })};
+    });
+    if (imgId) await S.set(`cf:img:${imgId}`, fullDataUrl);
+    await persist({ ...cur, sets });
+  };
+
+  const matchTones = async (setId, mode) => {
+    setSheet(null);
+    setMatching(setId);
+    const set = recRef.current.sets.find((s) => s.id === setId);
+    const entries = [
+      ...Object.entries(set.slots).map(([sid, im]) => ({ target: { setId, slot: sid }, id: im.id })),
+      ...set.extras.filter((x) => !x.video).map((x) => ({ target: { setId, extraId: x.eid }, id: x.id })),
+    ];
+    for (const e of entries) {
+      try {
+        const r = await S.get(`cf:img:${e.id}`);
+        const img = await loadImg(r.value);
+        const toned = autoToneCanvas(img, mode).toDataURL("image/jpeg", 0.82);
+        await replaceImage(e.target, toned);
+      } catch {}
+    }
+    setMatching("");
+  };
+
+  const deleteSet = async (setId) => {
+    const s = rec.sets.find((x) => x.id === setId);
+    if (s) {
+      for (const k of Object.keys(s.slots)) S.delete(`cf:img:${s.slots[k].id}`).catch(() => {});
+      for (const x of s.extras) { if (x.video) deleteLarge(x.id); else S.delete(`cf:img:${x.id}`).catch(() => {}); }
+    }
+    await persist({ ...rec, sets: rec.sets.filter((x) => x.id !== setId) });
+  };
+
+  const setDate = async (setId, date) => {
+    await persist({ ...rec, sets: rec.sets.map((s) => (s.id === setId ? { ...s, date } : s)) });
+  };
+
+  const wipe = async () => {
+    for (const s of rec.sets) {
+      for (const k of Object.keys(s.slots)) { try { await S.delete(`cf:img:${s.slots[k].id}`); } catch {} }
+      for (const x of s.extras) { try { x.video ? await deleteLarge(x.id) : await S.delete(`cf:img:${x.id}`); } catch {} }
+    }
+    try { await S.delete(`cf:p:${id}`); } catch {}
+    onDelete();
+  };
+
+  const runExport = async (kind) => {
+    setExporting(kind);
+    try {
+      const blob = kind === "report" ? await exportReport(recRef.current) : await exportPresentation(recRef.current);
+      const url = URL.createObjectURL(blob);
+      setSheet({ kind: "export-ready", url, blob, name: `${recRef.current.code}-${kind}.pdf` });
+    } catch {
+      setToast("Export failed — try again with fewer photos.");
+      setSheet(null);
+    }
+    setExporting("");
+  };
+
+  const shareExport = async () => {
+    try {
+      const file = new File([sheet.blob], sheet.name, { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: sheet.name });
+      } else setToast("Sharing not available — use Save PDF.");
+    } catch {}
+  };
+
+  if (!rec) {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh" }} className="flex justify-center pt-24">
+        <Loader2 className="animate-spin" style={{ color: C.muted }} />
+      </div>
+    );
+  }
+
+  const anyPhotos = rec.sets.some((s) => Object.keys(s.slots).length + s.extras.length > 0);
+
+  return (
+    <div style={{ background: C.bg, color: C.text, minHeight: "100vh" }} className="font-sans antialiased">
+      <div className="max-w-2xl mx-auto pb-44">
+        {/* compact header */}
+        <header className="px-4 pt-4 pb-0 sticky top-0 z-20" style={{ background: C.bg, borderBottom: `1px solid ${C.line}` }}>
+          <div className="flex items-center gap-3">
+            <button onClick={onBack}><ArrowLeft size={17} style={{ color: C.muted }} /></button>
+            <h1 className="text-base font-semibold tabular-nums flex-1 min-w-0 truncate">
+              {rec.code}{rec.dx ? <span className="font-normal text-xs ml-2" style={{ color: C.muted }}>{rec.dx}</span> : null}
+            </h1>
+            {(busy || exporting || matching) && <Loader2 size={14} className="animate-spin" style={{ color: C.accent }} />}
+            <button onClick={() => setShowDetails(!showDetails)}>
+              <Settings2 size={16} style={{ color: showDetails ? C.accent : C.muted }} />
+            </button>
+            {anyPhotos && (
+              <button onClick={() => setSheet({ kind: "export" })}>
+                <FileDown size={16} style={{ color: C.muted }} />
+              </button>
+            )}
+            {tab === "records" && anyPhotos && (
+              <button onClick={() => { setCompare(!compare); setPicked([]); }}>
+                <Columns2 size={16} style={{ color: compare ? C.accent : C.muted }} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-5 mt-2">
+            {[["records", "Records", Images], ["chart", "Chart", FileText]].map(([k, t, Icon]) => (
+              <button key={k} onClick={() => { setTab(k); setCompare(false); setPicked([]); }}
+                className="flex items-center gap-1.5 pb-2 text-[13px]"
+                style={{
+                  color: tab === k ? C.accent : C.muted,
+                  borderBottom: `2px solid ${tab === k ? C.accent : "transparent"}`,
+                  fontWeight: tab === k ? 600 : 400,
+                }}>
+                <Icon size={13} /> {t}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {toast && (
+          <div className="mx-4 mt-2 flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+               style={{ background: "#3B2B12", color: C.warn }}>
+            <AlertCircle size={14} /> {toast}
+          </div>
+        )}
+
+        {tab === "records" && (
+          <>
+            {compare && (
+              <div className="mx-4 mt-2 px-3 py-2 rounded-lg text-[11px]"
+                   style={{ background: C.panel, border: `1px solid ${C.accent}`, color: C.accent }}>
+                Pick two photos to compare — {picked.length}/2 (any dates)
+              </div>
+            )}
+
+            {/* collapsible case details */}
+            {showDetails && !compare && (
+              <section className="px-4 pt-3">
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="px-3 py-2 rounded-lg" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                    <p className="text-[10px] mb-1" style={{ color: C.muted }}>Stage</p>
+                    <select value={rec.stage} onChange={(e) => persist({ ...rec, stage: e.target.value })}
+                      className="bg-transparent outline-none text-xs w-full" style={{ color: C.text }}>
+                      {STAGES.map((s) => <option key={s} value={s} style={{ background: C.panel2 }}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                    <p className="text-[10px] mb-1" style={{ color: C.muted }}>Next visit</p>
+                    <input type="date" value={rec.next} onChange={(e) => persist({ ...rec, next: e.target.value })}
+                      className="bg-transparent outline-none text-xs w-full tabular-nums"
+                      style={{ color: rec.next && rec.next < today() ? C.warn : C.text, colorScheme: "dark" }} />
+                  </div>
+                </div>
+                <textarea rows={2} value={rec.notes} onChange={(e) => persist({ ...rec, notes: e.target.value })}
+                  placeholder="Notes…"
+                  className="w-full px-3 py-2 rounded-lg bg-transparent outline-none text-xs leading-relaxed resize-none"
+                  style={{ background: C.panel, border: `1px solid ${C.line}`, color: C.text }} />
+                <div className="flex justify-end mt-1">
+                  {confirmDel ? (
+                    <div className="flex gap-2">
+                      <button onClick={wipe} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold"
+                        style={{ background: C.danger, color: "#2A0E0C" }}>Delete permanently</button>
+                      <button onClick={() => setConfirmDel(false)} className="px-3 py-1.5 rounded-lg text-[10px]"
+                        style={{ background: C.panel, color: C.muted, border: `1px solid ${C.line}` }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDel(true)} className="flex items-center gap-1 text-[10px]" style={{ color: C.muted }}>
+                      <Trash2 size={11} /> Delete case
+                    </button>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* sessions — compact, one screen each */}
+            <section className="px-4 pt-3 space-y-4">
+              {rec.sets.length === 0 && (
+                <div className="px-6 py-10 rounded-2xl text-center" style={{ border: `1px dashed ${C.line}` }}>
+                  <p className="text-xs leading-relaxed" style={{ color: C.muted }}>
+                    Start a photo session — guided frame by frame:<br />Frontal → Smiling → 45° → Profile → IO → occlusal → X-rays.
+                  </p>
+                </div>
+              )}
+
+              {rec.sets.map((set) => {
+                const filled = Object.keys(set.slots).length;
+                return (
+                  <div key={set.id} className="rounded-xl p-2.5" style={{ background: C.panel, border: `1px solid ${C.line}` }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="date" value={set.date} onChange={(e) => setDate(set.id, e.target.value)}
+                        className="bg-transparent outline-none text-[13px] font-semibold tabular-nums"
+                        style={{ color: C.text, colorScheme: "dark" }} />
+                      <span className="flex-1" />
+                      {filled + set.extras.length > 1 && !compare && (
+                        <button onClick={() => setSheet({ kind: "tone", setId: set.id })} disabled={matching === set.id}
+                          className="flex items-center gap-1 text-[9px] px-1.5 py-1 rounded-md"
+                          style={{ background: C.panel2, color: C.accent, border: `1px solid ${C.line}` }}>
+                          {matching === set.id ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
+                          Tones
+                        </button>
+                      )}
+                      <span className="text-[9px] tabular-nums px-1.5 py-0.5 rounded-full"
+                            style={{ background: filled === 11 ? "#123B35" : C.panel2, color: filled === 11 ? C.accent : C.muted }}>
+                        {filled}/11
+                      </span>
+                      {!compare && (
+                        <button onClick={() => deleteSet(set.id)}>
+                          <Trash2 size={12} style={{ color: C.muted }} />
+                        </button>
+                      )}
+                    </div>
+
+                    {SLOT_GROUPS.map((g) => (
+                      <div key={g.id} className="grid gap-1 mb-1" style={{ gridTemplateColumns: `repeat(${g.cols}, 1fr)` }}>
+                        {g.slots.map(([sid, sname]) => {
+                          const im = set.slots[sid];
+                          const pi = picked.findIndex((x) => x.setId === set.id && x.ref === "s:" + sid);
+                          return (
+                            <button key={sid} onClick={() => tapSlot(set.id, sid)}
+                              className="relative rounded-md overflow-hidden active:opacity-70"
+                              style={{
+                                aspectRatio: g.aspect,
+                                background: im ? "#000" : C.panel2,
+                                border: `1px ${im ? "solid" : "dashed"} ${pi > -1 ? C.accent : C.line}`,
+                              }}>
+                              {im ? (
+                                <img src={im.thumb} alt={sname} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <Camera size={12} style={{ color: C.muted, opacity: compare ? 0.25 : 1 }} />
+                                </span>
+                              )}
+                              <span className="absolute bottom-0 inset-x-0 text-[7.5px] py-px text-center leading-tight"
+                                    style={{ background: im ? "rgba(0,0,0,.65)" : "transparent", color: im ? C.text : C.muted }}>
+                                {sname}
+                              </span>
+                              {pi > -1 && (
+                                <span className="absolute top-0.5 right-0.5 rounded-full text-[8px] font-bold px-1 py-px"
+                                      style={{ background: C.accent, color: "#06231F" }}>{pi + 1}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+
+                    <div className="grid gap-1" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+                      {set.extras.map((ex) => {
+                        const pi = picked.findIndex((x) => x.setId === set.id && x.ref === "e:" + ex.eid);
+                        return (
+                          <button key={ex.eid} onClick={() => tapExtra(set.id, ex)}
+                            className="relative rounded-md overflow-hidden active:opacity-70"
+                            style={{ aspectRatio: "4 / 3", background: "#000", border: `1px solid ${pi > -1 ? C.accent : C.line}` }}>
+                            {ex.thumb
+                              ? <img src={ex.thumb} alt={ex.label} className="w-full h-full object-cover" />
+                              : <span className="absolute inset-0 flex items-center justify-center"><Video size={14} style={{ color: C.muted }} /></span>}
+                            {ex.video && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="p-1 rounded-full" style={{ background: "rgba(0,0,0,.55)" }}>
+                                  <Play size={10} style={{ color: "#fff" }} />
+                                </span>
+                              </span>
+                            )}
+                            <span className="absolute bottom-0 inset-x-0 text-[7.5px] py-px text-center"
+                                  style={{ background: "rgba(0,0,0,.65)", color: C.text }}>{ex.label}</span>
+                            {pi > -1 && (
+                              <span className="absolute top-0.5 right-0.5 rounded-full text-[8px] font-bold px-1 py-px"
+                                    style={{ background: C.accent, color: "#06231F" }}>{pi + 1}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {!compare && (
+                        <button onClick={() => setSheet({ kind: "extra", setId: set.id })}
+                          className="rounded-md flex flex-col items-center justify-center gap-0.5"
+                          style={{ aspectRatio: "4 / 3", background: C.panel2, border: `1px dashed ${C.line}` }}>
+                          <Plus size={12} style={{ color: C.muted }} />
+                          <span className="text-[7.5px]" style={{ color: C.muted }}>PA·CBCT·Video</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          </>
+        )}
+
+        {tab === "chart" && <Chart chart={rec.chart} setChart={setChart} />}
+      </div>
+
+      {tab === "records" && !compare && (
+        <button onClick={newSet}
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold shadow-2xl active:scale-95 transition-transform"
+          style={{ background: C.accent, color: "#06231F" }}>
+          <Camera size={15} strokeWidth={2.4} /> New session
+        </button>
+      )}
+
+      {/* sheets */}
+      {sheet?.kind === "source" && (
+        <Sheet onClose={() => setSheet(null)} title={sheet.target.guided ? `Next: ${sheet.name}` : sheet.name}>
+          <SheetBtn icon={Camera} accent onClick={() => { const t = sheet.target; setSheet(null); setCamera({ target: t, name: sheet.name }); }}>
+            Take photo
+          </SheetBtn>
+          <FileBtn icon={ImageIcon} accept="image/*"
+            onSelect={async (f) => intake(await fileToDataUrl(f), sheet.target)}>
+            Choose from library
+          </FileBtn>
+          {sheet.target.guided && sheet.target.slot && (
+            <SheetBtn icon={SkipForward} onClick={() => {
+              const t = sheet.target;
+              const nxt = nextEmptySlot(recRef.current.sets, t.setId, t.slot);
+              if (nxt) openSource(t.setId, nxt); else setSheet(null);
+            }}>Skip this view</SheetBtn>
+          )}
+        </Sheet>
+      )}
+      {sheet?.kind === "extra" && (
+        <Sheet onClose={() => setSheet(null)} title="Additional record">
+          {EXTRA_TYPES.map((t) => (
+            <SheetBtn key={t} icon={Plus}
+              onClick={() => setSheet({ kind: "source", target: { setId: sheet.setId, extraLabel: t }, name: t })}>
+              {t}
+            </SheetBtn>
+          ))}
+          <FileBtn icon={Video} accept="video/*" capture="environment"
+            onSelect={(f) => handleVideo(f, { setId: sheet.setId })}>
+            Video clip (max 10 s)
+          </FileBtn>
+        </Sheet>
+      )}
+      {sheet?.kind === "tone" && (
+        <Sheet onClose={() => setSheet(null)} title="Match tones — whole session">
+          {TONES.map((t) => (
+            <SheetBtn key={t.id} icon={Wand2} accent={t.id === "natural"}
+              onClick={() => matchTones(sheet.setId, t.id)}>
+              {t.label}
+            </SheetBtn>
+          ))}
+          <p className="text-[11px] mt-1 leading-relaxed" style={{ color: C.muted }}>
+            Gently balances white balance and exposure across the session — subtle, keeps true skin tones.
+          </p>
+        </Sheet>
+      )}
+      {sheet?.kind === "export" && (
+        <Sheet onClose={() => setSheet(null)} title={`Export — ${rec.code}`}>
+          <SheetBtn icon={FileText} accent onClick={() => runExport("report")}>
+            {exporting === "report" ? "Building…" : "Case report (PDF)"}
+          </SheetBtn>
+          <SheetBtn icon={Presentation} onClick={() => runExport("presentation")}>
+            {exporting === "presentation" ? "Building…" : "Presentation (PDF, slide per session)"}
+          </SheetBtn>
+          <p className="text-[11px] mt-2 leading-relaxed" style={{ color: C.muted }}>
+            English only in PDFs · videos not included.
+          </p>
+        </Sheet>
+      )}
+      {sheet?.kind === "export-ready" && (
+        <Sheet onClose={() => { URL.revokeObjectURL(sheet.url); setSheet(null); }} title="PDF ready">
+          <a href={sheet.url} download={sheet.name}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm mb-2"
+            style={sheetBtnStyle(true)}>
+            <Download size={16} /> Save PDF — {sheet.name}
+          </a>
+          <button onClick={shareExport}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm mb-2"
+            style={sheetBtnStyle(false)}>
+            <Share2 size={16} /> Share…
+          </button>
+          <p className="text-[11px] leading-relaxed" style={{ color: C.muted }}>
+            If Save doesn't respond in this app, use Share — it opens the system share sheet.
+          </p>
+        </Sheet>
+      )}
+
+      {camera && (
+        <CameraView title={camera.name}
+          onClose={() => setCamera(null)}
+          onShot={(dataUrl) => intake(dataUrl, camera.target)}
+          fallback={async (f) => intake(await fileToDataUrl(f), camera.target)} />
+      )}
+
+      {viewer && (
+        <Viewer viewer={viewer} setViewer={setViewer}
+          onClose={() => setViewer(null)}
+          onDelete={(t) => clearTarget(t)}
+          onReplace={(v) => { setViewer(null); setSheet({ kind: "source", target: v.target, name: v.name }); }}
+          onEdit={(v) => { setViewer(null); guidedNext.current = null; setEditor(v); }} />
+      )}
+      {editor && (
+        <Editor v={editor}
+          onClose={finishEdit}
+          onSave={async (dataUrl) => { await replaceImage(editor.target, dataUrl); finishEdit(); }} />
+      )}
+      {compare && picked.length === 2 && (
+        <CompareView picked={picked} sets={rec.sets} onClose={() => setPicked([])} />
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Chart ---------------- */
+function Chart({ chart, setChart }) {
+  const [open, setOpen] = useState(() => new Set(["hist"]));
+  const toggleSec = (sid) =>
+    setOpen((prev) => { const n = new Set(prev); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
+  const filledCount = (sec) => sec.f.filter(([fid]) => (chart[fid] || "").trim()).length;
+
+  return (
+    <div className="px-4 pt-3 space-y-2">
+      {CHART.map((sec) => {
+        const isOpen = open.has(sec.id);
+        const n = filledCount(sec);
+        return (
+          <div key={sec.id} className="rounded-xl overflow-hidden"
+               style={{ background: C.panel, border: `1px solid ${isOpen ? C.accent + "55" : C.line}` }}>
+            <button onClick={() => toggleSec(sec.id)} className="w-full flex items-center gap-3 px-3.5 py-3 text-left">
+              <span className="flex-1 text-[13px] font-semibold">{sec.title}</span>
+              {n > 0 && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full tabular-nums"
+                      style={{ background: "#123B35", color: C.accent }}>{n}/{sec.f.length}</span>
+              )}
+              <ChevronDown size={14} style={{ color: C.muted, transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+            </button>
+            {isOpen && (
+              <div className="px-3.5 pb-3.5 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5">
+                {sec.f.map(([fid, label, hint, area]) => (
+                  <div key={fid} className={area ? "sm:col-span-2" : ""}>
+                    <p className="text-[10px] mb-1" style={{ color: C.muted }}>{label}</p>
+                    {area ? (
+                      <textarea rows={3} value={chart[fid] || ""} onChange={(e) => setChart(fid, e.target.value)}
+                        placeholder={hint || ""}
+                        className="w-full px-3 py-2 rounded-lg bg-transparent outline-none text-sm leading-relaxed resize-none"
+                        style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                    ) : (
+                      <input value={chart[fid] || ""} onChange={(e) => setChart(fid, e.target.value)}
+                        placeholder={hint || ""}
+                        className="w-full px-3 py-2 rounded-lg bg-transparent outline-none text-sm"
+                        style={{ background: C.panel2, border: `1px solid ${C.line}`, color: C.text }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <div className="h-8" />
+    </div>
+  );
+}
+
+/* ---------------- Viewer ---------------- */
+function Viewer({ viewer, setViewer, onClose, onDelete, onReplace, onEdit }) {
+  const v = viewer.list[viewer.idx];
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    setSrc(null);
+    (async () => {
+      try {
+        if (v.video) setSrc(await loadLarge(v.imgId));
+        else { const r = await S.get(`cf:img:${v.imgId}`); setSrc(r.value); }
+      } catch { setSrc(v.thumb); }
+    })();
+  }, [v.imgId]);
+
+  const go = (d) => {
+    const n = (viewer.idx + d + viewer.list.length) % viewer.list.length;
+    setViewer({ ...viewer, idx: n });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#000", paddingBottom: 80 }}>
+      <div className="flex items-center justify-between px-4 py-3">
+        <div>
+          <p className="text-sm font-semibold" style={{ color: C.text }}>{v.name}</p>
+          <p className="text-[10px] tabular-nums" style={{ color: C.muted }}>{viewer.idx + 1} / {viewer.list.length}</p>
+        </div>
+        <div className="flex gap-4 items-center">
+          {!v.video && (
+            <button onClick={() => onEdit(v)} className="flex items-center gap-1 text-xs" style={{ color: C.accent }}>
+              <Pencil size={14} /> Edit
+            </button>
+          )}
+          {!v.video && (
+            <button onClick={() => onReplace(v)}><RefreshCw size={14} style={{ color: C.muted }} /></button>
+          )}
+          <button onClick={() => onDelete(v.target)}><Trash2 size={16} style={{ color: C.danger }} /></button>
+          <button onClick={onClose}><X size={20} style={{ color: C.text }} /></button>
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-2 relative">
+        {!src ? <Loader2 className="animate-spin" style={{ color: C.muted }} />
+          : v.video
+            ? <video src={src} controls playsInline className="max-w-full max-h-full" />
+            : <img src={src} alt="" className="max-w-full max-h-full object-contain" />}
+        {viewer.list.length > 1 && (
+          <>
+            <button onClick={() => go(-1)} className="absolute left-1 top-1/2 -translate-y-1/2 p-3 rounded-full"
+              style={{ background: "rgba(0,0,0,.5)" }}>
+              <ChevronLeft size={20} style={{ color: C.text }} />
+            </button>
+            <button onClick={() => go(1)} className="absolute right-1 top-1/2 -translate-y-1/2 p-3 rounded-full"
+              style={{ background: "rgba(0,0,0,.5)" }}>
+              <ChevronRight size={20} style={{ color: C.text }} />
+            </button>
+          </>
+        )}
+      </div>
+      {viewer.list.length > 1 && (
+        <p className="text-center text-[10px] pb-3" style={{ color: C.muted }}>
+          Next: {viewer.list[(viewer.idx + 1) % viewer.list.length].name}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Editor ---------------- */
+function Editor({ v, onClose, onSave }) {
+  const [img, setImg] = useState(null);
+  const [rot, setRot] = useState(0);
+  const [flip, setFlip] = useState(false);
+  const [bright, setBright] = useState(1);
+  const [contrast, setContrast] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const [off, setOff] = useState({ x: 0, y: 0 });
+  const [texts, setTexts] = useState([]);
+  const [selText, setSelText] = useState(null);
+  const [addingText, setAddingText] = useState(false);
+  const [textDraft, setTextDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [dims, setDims] = useState({ W: 320, H: 400 });
+  const [cropMode, setCropMode] = useState(false);
+  const [cropRect, setCropRect] = useState(null);
+  const [cropRatio, setCropRatio] = useState(null);   // null = free
+  const cvRef = useRef(null);
+  const pointers = useRef(new Map());
+  const dragText = useRef(null);
+  const cropDrag = useRef(null);
+  const gesture = useRef({ dist: 0, cx: 0, cy: 0 });
+
+  const aspect = v.aspect || 4 / 3;
+
+  useEffect(() => {
+    let W = Math.min(window.innerWidth - 20, 520);
+    let H = W / aspect;
+    const maxH = window.innerHeight - 300;
+    if (H > maxH) { H = maxH; W = H * aspect; }
+    setDims({ W: Math.round(W), H: Math.round(H) });
+    (async () => {
+      try {
+        const r = await S.get(`cf:img:${v.imgId}`);
+        setImg(await loadImg(r.value));
+      } catch {}
+    })();
+  }, [v.imgId]);
+
+  const applyAutoTone = () => {
+    if (!img) return;
+    const out = new Image();
+    out.onload = () => setImg(out);
+    out.src = autoToneCanvas(img, "natural").toDataURL("image/jpeg", 0.9);
+  };
+
+  const drawBase = useCallback((ctx, W, H, k) => {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    if (!img) return;
+    ctx.save();
+    ctx.filter = `brightness(${bright}) contrast(${contrast})`;
+    ctx.translate(W / 2 + off.x * k, H / 2 + off.y * k);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.scale(flip ? -1 : 1, 1);
+    const iw = img.width, ih = img.height;
+    const eff = rot % 180 ? { w: ih, h: iw } : { w: iw, h: ih };
+    const s0 = Math.max(W / eff.w, H / eff.h);
+    const sc = s0 * zoom;
+    ctx.drawImage(img, (-iw * sc) / 2, (-ih * sc) / 2, iw * sc, ih * sc);
+    ctx.restore();
+  }, [img, rot, flip, bright, contrast, zoom, off]);
+
+  const drawTexts = useCallback((ctx, W, H, k) => {
+    ctx.textAlign = "center";
+    for (const t of texts) {
+      const fs = 26 * k;
+      ctx.font = `bold ${fs}px Helvetica, Arial, sans-serif`;
+      ctx.lineWidth = Math.max(2, fs / 8);
+      ctx.strokeStyle = "rgba(0,0,0,.85)";
+      ctx.fillStyle = t.id === selText ? "#3FC1B0" : "#fff";
+      ctx.strokeText(t.str, t.x * W, t.y * H);
+      ctx.fillText(t.str, t.x * W, t.y * H);
+    }
+  }, [texts, selText]);
+
+  useEffect(() => {
+    const cv = cvRef.current;
+    if (!cv) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = dims.W * dpr;
+    cv.height = dims.H * dpr;
+    const ctx = cv.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawBase(ctx, dims.W, dims.H, 1);
+    if (!cropMode) drawTexts(ctx, dims.W, dims.H, 1);
+    if (cropMode && cropRect) {
+      const { x, y, w, h } = cropRect;
+      ctx.fillStyle = "rgba(0,0,0,.55)";
+      ctx.fillRect(0, 0, dims.W, y);
+      ctx.fillRect(0, y + h, dims.W, dims.H - y - h);
+      ctx.fillRect(0, y, x, h);
+      ctx.fillRect(x + w, y, dims.W - x - w, h);
+      ctx.strokeStyle = C.accent;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = C.accent;
+      /* corner handles */
+      for (const [cx, cy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) {
+        ctx.fillRect(cx - 8, cy - 8, 16, 16);
+      }
+      /* edge handles */
+      for (const [cx, cy] of [[x + w / 2, y], [x + w / 2, y + h], [x, y + h / 2], [x + w, y + h / 2]]) {
+        ctx.fillRect(cx - 6, cy - 6, 12, 12);
+      }
+    }
+  }, [drawBase, drawTexts, dims, cropMode, cropRect]);
+
+  const pos = (e) => {
+    const r = cvRef.current.getBoundingClientRect();
+    return { x: clamp(e.clientX - r.left, 0, dims.W), y: clamp(e.clientY - r.top, 0, dims.H) };
+  };
+  const centroid = () => {
+    const ps = [...pointers.current.values()];
+    return { x: ps.reduce((a, p) => a + p.x, 0) / ps.length, y: ps.reduce((a, p) => a + p.y, 0) / ps.length };
+  };
+  const distance = () => {
+    const [a, b] = [...pointers.current.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+
+  const onDown = (e) => {
+    cvRef.current.setPointerCapture(e.pointerId);
+    const p = pos(e);
+    pointers.current.set(e.pointerId, p);
+
+    if (cropMode && cropRect) {
+      const { x, y, w, h } = cropRect;
+      const corners = [
+        { cx: x, cy: y, ax: x + w, ay: y + h },
+        { cx: x + w, cy: y, ax: x, ay: y + h },
+        { cx: x, cy: y + h, ax: x + w, ay: y },
+        { cx: x + w, cy: y + h, ax: x, ay: y },
+      ];
+      for (const c of corners) {
+        if (Math.abs(p.x - c.cx) < 24 && Math.abs(p.y - c.cy) < 24) {
+          cropDrag.current = { mode: "corner", ax: c.ax, ay: c.ay };
+          return;
+        }
+      }
+      const edges = [
+        { id: "t", hit: Math.abs(p.y - y) < 18 && p.x > x && p.x < x + w },
+        { id: "b", hit: Math.abs(p.y - (y + h)) < 18 && p.x > x && p.x < x + w },
+        { id: "l", hit: Math.abs(p.x - x) < 18 && p.y > y && p.y < y + h },
+        { id: "r", hit: Math.abs(p.x - (x + w)) < 18 && p.y > y && p.y < y + h },
+      ];
+      for (const ed of edges) {
+        if (ed.hit) { cropDrag.current = { mode: "edge", edge: ed.id }; return; }
+      }
+      if (p.x > x && p.x < x + w && p.y > y && p.y < y + h) {
+        cropDrag.current = { mode: "move" };
+        return;
+      }
+      cropDrag.current = null;
+      return;
+    }
+
+    for (const t of texts) {
+      const dx = p.x - t.x * dims.W, dy = p.y - t.y * dims.H;
+      if (Math.abs(dx) < 70 && Math.abs(dy) < 24) {
+        dragText.current = t.id;
+        setSelText(t.id);
+        return;
+      }
+    }
+    dragText.current = null;
+    setSelText(null);
+    if (pointers.current.size === 2) {
+      gesture.current = { dist: distance(), ...centroid() };
+    }
+  };
+
+  const onMove = (e) => {
+    if (!pointers.current.has(e.pointerId)) return;
+    const prev = pointers.current.get(e.pointerId);
+    const p = pos(e);
+    pointers.current.set(e.pointerId, p);
+
+    if (cropMode) {
+      if (!cropDrag.current || !cropRect) return;
+      const A = cropRatio;
+      if (cropDrag.current.mode === "move") {
+        setCropRect((r) => ({
+          ...r,
+          x: clamp(r.x + p.x - prev.x, 0, dims.W - r.w),
+          y: clamp(r.y + p.y - prev.y, 0, dims.H - r.h),
+        }));
+      } else if (cropDrag.current.mode === "corner") {
+        const { ax, ay } = cropDrag.current;
+        if (A) {
+          let w = Math.max(50, Math.abs(p.x - ax));
+          const maxW = p.x > ax ? dims.W - ax : ax;
+          const maxHspace = p.y > ay ? dims.H - ay : ay;
+          w = Math.min(w, maxW, maxHspace * A);
+          const h = w / A;
+          setCropRect({ x: p.x > ax ? ax : ax - w, y: p.y > ay ? ay : ay - h, w, h });
+        } else {
+          const w = clamp(Math.abs(p.x - ax), 50, dims.W);
+          const h = clamp(Math.abs(p.y - ay), 50, dims.H);
+          setCropRect({ x: Math.min(ax, p.x), y: Math.min(ay, p.y), w, h });
+        }
+      } else {
+        /* edge */
+        const ed = cropDrag.current.edge;
+        setCropRect((r) => {
+          let { x, y, w, h } = r;
+          const cx = x + w / 2, cy = y + h / 2;
+          if (ed === "r") w = clamp(p.x - x, 50, dims.W - x);
+          if (ed === "l") { const nx = clamp(p.x, 0, x + w - 50); w = w + x - nx; x = nx; }
+          if (ed === "b") h = clamp(p.y - y, 50, dims.H - y);
+          if (ed === "t") { const ny = clamp(p.y, 0, y + h - 50); h = h + y - ny; y = ny; }
+          if (A) {
+            if (ed === "l" || ed === "r") {
+              h = w / A;
+              y = clamp(cy - h / 2, 0, dims.H - h);
+              if (h > dims.H) { h = dims.H; w = h * A; y = 0; }
+            } else {
+              w = h * A;
+              x = clamp(cx - w / 2, 0, dims.W - w);
+              if (w > dims.W) { w = dims.W; h = w / A; x = 0; }
+            }
+          }
+          return { x, y, w, h };
+        });
+      }
+      return;
+    }
+
+    if (dragText.current) {
+      setTexts((ts) => ts.map((t) => (t.id === dragText.current
+        ? { ...t, x: clamp(t.x + (p.x - prev.x) / dims.W, 0.02, 0.98), y: clamp(t.y + (p.y - prev.y) / dims.H, 0.04, 0.98) }
+        : t)));
+      return;
+    }
+
+    if (pointers.current.size === 2) {
+      const d = distance();
+      const c = centroid();
+      if (gesture.current.dist) {
+        setZoom((z) => clamp(z * (d / gesture.current.dist), 1, 6));
+        setOff((o) => ({ x: o.x + c.x - gesture.current.cx, y: o.y + c.y - gesture.current.cy }));
+      }
+      gesture.current = { dist: d, cx: c.x, cy: c.y };
+    } else {
+      setOff((o) => ({ x: o.x + (p.x - prev.x), y: o.y + (p.y - prev.y) }));
+    }
+  };
+
+  const onUp = (e) => {
+    pointers.current.delete(e.pointerId);
+    gesture.current = { dist: 0, cx: 0, cy: 0 };
+    dragText.current = null;
+    cropDrag.current = null;
+  };
+
+  const startCrop = (ratio = null) => {
+    setCropRatio(ratio);
+    let w = dims.W * 0.85;
+    let h = ratio ? w / ratio : dims.H * 0.85;
+    if (h > dims.H - 12) { h = dims.H - 12; if (ratio) w = h * ratio; }
+    setCropRect({ x: (dims.W - w) / 2, y: (dims.H - h) / 2, w, h });
+    setCropMode(true);
+    setSelText(null);
+  };
+
+  const changeRatio = (ratio) => {
+    setCropRatio(ratio);
+    if (!cropRect) return;
+    if (ratio) {
+      setCropRect((r) => {
+        const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+        let w = r.w, h = w / ratio;
+        if (h > dims.H) { h = dims.H; w = h * ratio; }
+        if (w > dims.W) { w = dims.W; h = w / ratio; }
+        return {
+          w, h,
+          x: clamp(cx - w / 2, 0, dims.W - w),
+          y: clamp(cy - h / 2, 0, dims.H - h),
+        };
+      });
+    }
+  };
+
+  const applyCrop = async () => {
+    if (!cropRect || !img) { setCropMode(false); return; }
+    const k = 2000 / dims.W;
+    const cv1 = document.createElement("canvas");
+    cv1.width = Math.round(dims.W * k);
+    cv1.height = Math.round(dims.H * k);
+    drawBase(cv1.getContext("2d"), cv1.width, cv1.height, k);
+    const cv2 = document.createElement("canvas");
+    cv2.width = Math.round(cropRect.w * k);
+    cv2.height = Math.round(cropRect.h * k);
+    cv2.getContext("2d").drawImage(cv1,
+      Math.round(cropRect.x * k), Math.round(cropRect.y * k), cv2.width, cv2.height,
+      0, 0, cv2.width, cv2.height);
+    const newImg = await loadImg(cv2.toDataURL("image/jpeg", 0.9));
+    setTexts((ts) => ts
+      .map((t) => ({
+        ...t,
+        x: (t.x * dims.W - cropRect.x) / cropRect.w,
+        y: (t.y * dims.H - cropRect.y) / cropRect.h,
+      }))
+      .filter((t) => t.x > 0.02 && t.x < 0.98 && t.y > 0.04 && t.y < 0.98));
+    setImg(newImg);
+    setRot(0); setFlip(false); setZoom(1); setOff({ x: 0, y: 0 });
+    setBright(1); setContrast(1);
+    setCropMode(false);
+    setCropRect(null);
+  };
+
+  const save = async () => {
+    if (!img) return;
+    setSaving(true);
+    const outW = 1600;
+    const outH = Math.round(outW / aspect);
+    const cv = document.createElement("canvas");
+    cv.width = outW; cv.height = outH;
+    const ctx = cv.getContext("2d");
+    const k = outW / dims.W;
+    drawBase(ctx, outW, outH, k);
+    drawTexts(ctx, outW, outH, k);
+    await onSave(cv.toDataURL("image/jpeg", 0.85));
+    setSaving(false);
+  };
+
+  const addText = () => {
+    if (!textDraft.trim()) { setAddingText(false); return; }
+    const id = uid();
+    setTexts((ts) => [...ts, { id, str: textDraft.trim(), x: 0.5, y: 0.85 }]);
+    setSelText(id);
+    setTextDraft("");
+    setAddingText(false);
+  };
+
+  const Tool = ({ icon: Icon, onClick, active, label, disabled }) => (
+    <button onClick={onClick} disabled={disabled}
+      className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg disabled:opacity-30"
+      style={{ background: active ? C.accent : "transparent", color: active ? "#06231F" : C.text }}>
+      <Icon size={16} />
+      <span className="text-[8px]">{label}</span>
+    </button>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#000", paddingBottom: 80 }}>
+      <div className="flex items-center justify-between px-4 py-2.5">
+        <button onClick={onClose}><X size={20} style={{ color: C.text }} /></button>
+        <p className="text-sm font-semibold" style={{ color: C.text }}>{v.name}</p>
+        {cropMode ? (
+          <button onClick={applyCrop}
+            className="flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-full font-semibold"
+            style={{ background: C.accent, color: "#06231F" }}>
+            <Check size={13} /> Apply
+          </button>
+        ) : (
+          <button onClick={save} disabled={saving}
+            className="flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-full font-semibold disabled:opacity-50"
+            style={{ background: C.accent, color: "#06231F" }}>
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />} Save
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 flex items-center justify-center min-h-0">
+        {img ? (
+          <canvas ref={cvRef}
+            style={{ width: dims.W, height: dims.H, borderRadius: 8, border: `1px solid ${C.line}`, touchAction: "none" }}
+            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
+        ) : <Loader2 className="animate-spin" style={{ color: C.muted }} />}
+      </div>
+
+      {cropMode ? (
+        <>
+          <div className="flex justify-center gap-1.5 pt-2 flex-wrap px-3">
+            {CROP_RATIOS.map((r) => (
+              <button key={r.id} onClick={() => changeRatio(r.v)}
+                className="text-[11px] px-3 py-1.5 rounded-lg"
+                style={{
+                  background: cropRatio === r.v ? C.accent : C.panel,
+                  color: cropRatio === r.v ? "#06231F" : C.muted,
+                  border: `1px solid ${cropRatio === r.v ? C.accent : C.line}`,
+                  fontWeight: cropRatio === r.v ? 600 : 400,
+                }}>{r.label}</button>
+            ))}
+          </div>
+          <p className="text-center text-[10px] pt-1.5" style={{ color: C.muted }}>
+            Drag corners or edges freely · drag inside to move
+          </p>
+          <div className="flex justify-center py-2.5">
+            <button onClick={() => { setCropMode(false); setCropRect(null); }}
+              className="text-xs px-4 py-1.5 rounded-lg" style={{ background: C.panel, color: C.muted, border: `1px solid ${C.line}` }}>
+              Cancel crop
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {selText && (
+            <div className="flex justify-center pt-1.5">
+              <button onClick={() => { setTexts((ts) => ts.filter((t) => t.id !== selText)); setSelText(null); }}
+                className="flex items-center gap-1 text-xs px-3 py-1 rounded-lg"
+                style={{ background: "#3A1F1F", color: C.danger }}>
+                <Trash2 size={11} /> Remove text
+              </button>
+            </div>
+          )}
+          {addingText && (
+            <div className="flex gap-2 px-4 pt-2">
+              <input autoFocus value={textDraft} onChange={(e) => setTextDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addText()}
+                placeholder="Label text…"
+                className="flex-1 px-3 py-2 rounded-xl outline-none text-sm"
+                style={{ background: C.panel, border: `1px solid ${C.accent}`, color: C.text }} />
+              <button onClick={addText} className="px-4 rounded-xl text-xs font-semibold"
+                style={{ background: C.accent, color: "#06231F" }}>Add</button>
+            </div>
+          )}
+          <div className="px-5 pt-2 space-y-1.5">
+            <div className="flex items-center gap-3">
+              <ZoomIn size={13} style={{ color: C.muted }} />
+              <input type="range" min="1" max="6" step="0.02" value={zoom}
+                onChange={(e) => setZoom(+e.target.value)} className="flex-1" style={{ accentColor: C.accent }} />
+            </div>
+            <div className="flex items-center gap-3">
+              <Sun size={13} style={{ color: C.muted }} />
+              <input type="range" min="0.6" max="1.5" step="0.02" value={bright}
+                onChange={(e) => setBright(+e.target.value)} className="flex-1" style={{ accentColor: C.accent }} />
+            </div>
+            <div className="flex items-center gap-3">
+              <Contrast size={13} style={{ color: C.muted }} />
+              <input type="range" min="0.7" max="1.4" step="0.02" value={contrast}
+                onChange={(e) => setContrast(+e.target.value)} className="flex-1" style={{ accentColor: C.accent }} />
+            </div>
+          </div>
+          <div className="flex justify-center gap-1 py-2 flex-wrap">
+            <Tool icon={Crop} label="Crop" onClick={() => startCrop(null)} />
+            <Tool icon={RotateCw} label="Rotate" onClick={() => setRot((r) => (r + 90) % 360)} />
+            <Tool icon={FlipHorizontal2} label="Mirror" active={flip} onClick={() => setFlip(!flip)} />
+            <Tool icon={Wand2} label="Auto tone" onClick={applyAutoTone} />
+            <Tool icon={Type} label="Text" active={addingText} onClick={() => setAddingText(!addingText)} />
+            <Tool icon={RefreshCw} label="Reset"
+              onClick={() => { setRot(0); setFlip(false); setBright(1); setContrast(1); setZoom(1); setOff({ x: 0, y: 0 }); }} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Compare ---------------- */
+function CompareView({ picked, sets, onClose }) {
+  const [srcs, setSrcs] = useState([null, null]);
+  const metas = picked.map(({ setId, ref }) => {
+    const s = sets.find((x) => x.id === setId);
+    if (ref.startsWith("s:")) {
+      const sid = ref.slice(2);
+      return { date: s?.date, name: SLOT_NAME[sid], im: s?.slots[sid] };
+    }
+    const ex = s?.extras.find((x) => "e:" + x.eid === ref);
+    return { date: s?.date, name: ex?.label, im: ex };
+  });
+
+  useEffect(() => {
+    (async () => {
+      const out = [];
+      for (const m of metas) {
+        try { const r = await S.get(`cf:img:${m.im.id}`); out.push(r.value); }
+        catch { out.push(m.im?.thumb || null); }
+      }
+      setSrcs(out);
+    })();
+  }, [picked.map((p) => p.setId + p.ref).join()]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#000", paddingBottom: 80 }}>
+      <div className="flex items-center justify-between px-4 py-3">
+        <p className="text-sm font-semibold flex items-center gap-2" style={{ color: C.accent }}>
+          <Check size={15} /> Compare
+        </p>
+        <button onClick={onClose}><X size={20} style={{ color: C.text }} /></button>
+      </div>
+      <div className="flex-1 grid grid-cols-2 gap-px" style={{ background: C.line }}>
+        {srcs.map((s, i) => (
+          <div key={i} className="relative flex items-center justify-center" style={{ background: "#000", paddingBottom: 80 }}>
+            {s ? <img src={s} alt="" className="max-w-full max-h-full object-contain" />
+               : <Loader2 className="animate-spin" style={{ color: C.muted }} />}
+            <div className="absolute top-2 inset-x-2 text-center">
+              <span className="text-[10px] px-2 py-1 rounded tabular-nums"
+                    style={{ background: "rgba(0,0,0,.7)", color: C.text }}>
+                {fmt(metas[i]?.date)} · {metas[i]?.name}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
